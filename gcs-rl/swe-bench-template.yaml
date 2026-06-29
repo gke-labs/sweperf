@@ -1,0 +1,17 @@
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxTemplate
+metadata:
+  name: swe-bench-generic
+spec:
+  podTemplate:
+    spec:
+      containers:
+      - name: sandbox
+        image: python:3.10-slim
+        command: ["sleep", "infinity"]
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+      volumes:
+      - name: workspace
+        emptyDir: {}

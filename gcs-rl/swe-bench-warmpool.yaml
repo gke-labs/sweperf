@@ -1,0 +1,10 @@
+apiVersion: extensions.agents.x-k8s.io/v1beta1
+kind: SandboxWarmPool
+metadata:
+  name: swe-bench-generic-pool
+spec:
+  templateRef:
+    name: swe-bench-generic
+  minReplicas: 10
+  maxReplicas: 50
+  strategy: Static
