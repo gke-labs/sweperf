@@ -1,42 +1,40 @@
-# Plan: Integrating SWE-bench Workload with ClusterLoader2
+# Plan: Baseline SWE-bench Load Test with ClusterLoader2
 
 ## 1. Background & Motivation
 
-Currently, the `agent-sandbox` load tests (via ClusterLoader2 in `dev/load-test/agent-sandbox-load-test.yaml`) only measure the creation latency of raw `Sandbox` resources.
+We want to establish a baseline performance metric for raw Kubernetes Pod creation latency when running heterogeneous SWE-bench images. Before we test the `agent-sandbox` controller and its WarmPool capabilities, we need to know how fast standard GKE can spin up standard Pods.
 
-However, the `agent-sandbox-rl` SWE-bench orchestration relies on the **v1beta1 extensions**:
-1. **`SandboxTemplate`**: Defines the base Sandbox configuration for a SWE-bench task image.
-2. **`SandboxWarmPool`**: Maintains a pre-warmed set of Sandboxes based on the template.
-3. **`SandboxClaim`**: Claims an existing, running Sandbox from the warm pool to achieve sub-second startup times.
+The goal is to submit raw Pods against random SWE-bench images, keeping a fixed number "in flight" (concurrently running) at any given time, and measure the startup and execution latency using ClusterLoader2 (CL2).
 
-To accurately load-test the SWE-bench workflow, we need to model this specific resource churn in ClusterLoader2 (CL2).
-
-## 2. Integration Plan (Custom Python Benchmark)
-
-Since ClusterLoader2 cannot natively measure execution commands sent over the SDK, we will build a custom Python benchmark using the `k8s_agent_sandbox` asynchronous SDK. 
+## 2. Integration Plan (ClusterLoader2 Baseline)
 
 ### Step 1: Pre-pull the SWE-bench Images
-Instead of extracting the heavy, task-specific data (like the Conda environment and Git repository) into tarballs, we will use the `agent-sandbox-rl` prepull feature (`fleet.prepull()`) to pre-copy the full SWE-bench images to the target Kubernetes nodes. This DaemonSet-based approach avoids cold-start latency when scaling up.
+We will use the `agent-sandbox-rl` prepull feature (via `prepull_images.py` / `sync_swe_bench_images.py`) to pre-copy the full SWE-bench images to the target Kubernetes nodes via a DaemonSet. This avoids cold-start network latency from skewing our baseline metrics.
 
-### Step 2: Create the Base Infrastructure
-We will use the actual SWE-bench image as the Sandbox image, bypassing the need for a separate base image:
-- `swe-bench-template.yaml`: A `SandboxTemplate` specifying the target SWE-bench image.
-- `swe-bench-warmpool.yaml`: A `SandboxWarmPool` that provisions pre-warmed replicas of this template.
+### Step 2: Write the Closed-Loop Python Driver
+ClusterLoader2 is primarily an open-loop load testing tool. To satisfy the requirement of "scaling up from 1 job until a few are pending and submitting immediately on completion," we will build a custom Python benchmark script (`baseline_benchmark.py`).
 
-### Step 3: Write the Python Benchmark Script
-We will create a dedicated asynchronous Python script (e.g., `test/benchmarks/swe_bench_load_test.py`) that uses the Python SDK (`k8s_agent_sandbox`) to perform the load test.
+The script will use the native `kubernetes` Python client to implement a dynamic concurrency controller:
+1. **Target Pending State**: We will maintain a rule: `if current_pending_jobs < TARGET_PENDING (e.g., 2), submit a new Job.`
+2. **Slow Start & Scale Up**: 
+   - At T=0, 0 jobs are pending, so it submits jobs until 2 are pending.
+   - If the cluster has capacity, those 2 become `Running`. The pending count drops to 0. The script submits 2 more.
+   - This naturally scales up the number of `Running` jobs until the cluster hits its maximum resource capacity (e.g., node CPU/RAM limits).
+3. **Steady State**: Once the cluster is full, new jobs will stay `Pending`. The script stops submitting. As soon as a running Job completes, Kubernetes will schedule a pending one, dropping the pending count, which triggers the script to submit a replacement. This ensures perfect closed-loop utilization.
 
-The script will use `asyncio` to execute `N` concurrent tasks. Each task will do the following:
-1. **Claim:** Create a `SandboxClaim` targeting the warm pool and await its binding. Record the `Claim Latency`.
-2. **Connect:** Establish a connection to the Sandbox.
-3. **Execute:** Run a mock SWE-bench test command (since the image already has all testbed/conda files pre-copied). Record the `Execution Latency`.
-4. **Cleanup:** Delete the claim.
+### Step 3: Random Image Selection
+The script will fetch the list of SWE-bench instances (reusing the Hugging Face fetch logic from `sync_swe_bench_images.py`) and select a random pre-pulled image for each new Job. This ensures we baseline against heterogeneous images.
 
-At the end of the run, the script will aggregate all recorded latencies (min, max, p50, p90, p99) and output a detailed performance report.
+### Step 4: Measure & Report
+The script will use the Kubernetes Watch API to record precise timestamps:
+- `T0`: Job creation.
+- `T1`: Pod enters `Running` state.
+- `T2`: Job completes.
+
+At the end of the run (e.g., after 50 jobs complete), it will output aggregated startup (`T1 - T0`) and execution (`T2 - T1`) latencies.
 
 ## 3. Next Steps
 
-If this plan looks good, I can proceed with implementing these files:
-1. Creating the three YAML object templates (`Template`, `WarmPool`, `Claim`).
-2. Authoring the `swe-bench-load-test.yaml` CL2 configuration.
-3. Adding a run script in `test-recipes/`.
+1. **Author the Generator Script:** Write the Python script to generate the batched CL2 configuration.
+2. **Create the Base Pod Template:** Write a simple `raw-pod-template.yaml` that takes the `Image` as a template variable.
+3. **Execute the Baseline:** Run the generated CL2 test against the GKE cluster and collect the baseline performance report.
