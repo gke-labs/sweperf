@@ -18,17 +18,26 @@ fi
 if [ ${#IMAGES[@]} -eq 0 ]; then
     IMAGES=("swebench/sweb.eval.x86_64.astropy_1776_astropy-12907") # Default fallback
 fi
-
 echo "=== 1. Creating GKE Cluster ==="
 gcloud container clusters create "$CLUSTER_NAME" \
     --project="$PROJECT_ID" \
     --zone="${REGION}-a" \
     --machine-type="c4-standard-16" \
     --disk-size="500GB" \
-    --disk-type="pd-balanced" \
+    --disk-type="hyperdisk-balanced" \
     --num-nodes=2 \
-    --scopes="gke-default,storage-rw" || echo "Cluster may already exist or failed to create."
+    --scopes="gke-default,storage-rw"
 gcloud container clusters get-credentials "$CLUSTER_NAME" --zone="${REGION}-a" --project="$PROJECT_ID"
+
+echo "Waiting for cluster API to become reachable..."
+for i in {1..10}; do
+    if kubectl get nodes; then
+        echo "Cluster is reachable."
+        break
+    fi
+    echo "Waiting for cluster... ($i/10)"
+    sleep 15
+done
 
 
 
