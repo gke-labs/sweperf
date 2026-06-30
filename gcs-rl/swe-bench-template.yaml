@@ -7,7 +7,7 @@ spec:
     spec:
       containers:
       - name: sandbox
-        image: python:3.10-slim
+        image: us-central1-docker.pkg.dev/bsalmon-gke-dev/bsalmon-agentic-repo/swe-bench-base:latest
         command: ["sleep", "infinity"]
         volumeMounts:
         - name: workspace

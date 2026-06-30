@@ -15,24 +15,22 @@ To accurately load-test the SWE-bench workflow, we need to model this specific r
 
 Since ClusterLoader2 cannot natively measure execution commands sent over the SDK, we will build a custom Python benchmark using the `k8s_agent_sandbox` asynchronous SDK. 
 
-### Step 1: Pre-process the SWE-bench Data (GCS Tarball)
-We will create a pre-processing script that extracts the heavy, task-specific data (like the Conda environment and Git repository) from the standard SWE-bench images.
-It will package this data into an uncompressed `.tar` file and upload it to a GCS bucket. 
+### Step 1: Pre-pull the SWE-bench Images
+Instead of extracting the heavy, task-specific data (like the Conda environment and Git repository) into tarballs, we will use the `agent-sandbox-rl` prepull feature (`fleet.prepull()`) to pre-copy the full SWE-bench images to the target Kubernetes nodes. This DaemonSet-based approach avoids cold-start latency when scaling up.
 
 ### Step 2: Create the Base Infrastructure
-We will create two Kubernetes YAML templates to set up the environment before the benchmark runs:
-- `swe-bench-template.yaml`: A single, generic `SandboxTemplate` using a lightweight base image (e.g., Python or Ubuntu) with basic tools like `curl` and `tar` installed.
-- `swe-bench-warmpool.yaml`: A single `SandboxWarmPool` that provisions pre-warmed replicas of this generic template.
+We will use the actual SWE-bench image as the Sandbox image, bypassing the need for a separate base image:
+- `swe-bench-template.yaml`: A `SandboxTemplate` specifying the target SWE-bench image.
+- `swe-bench-warmpool.yaml`: A `SandboxWarmPool` that provisions pre-warmed replicas of this template.
 
 ### Step 3: Write the Python Benchmark Script
 We will create a dedicated asynchronous Python script (e.g., `test/benchmarks/swe_bench_load_test.py`) that uses the Python SDK (`k8s_agent_sandbox`) to perform the load test.
 
 The script will use `asyncio` to execute `N` concurrent tasks. Each task will do the following:
-1. **Claim:** Create a `SandboxClaim` targeting the generic warm pool and await its binding. Record the `Claim Latency`.
+1. **Claim:** Create a `SandboxClaim` targeting the warm pool and await its binding. Record the `Claim Latency`.
 2. **Connect:** Establish a connection to the Sandbox.
-3. **Download:** Use `handle.async_exec()` to run the GCS download and extraction command (e.g., `curl -s <url> | tar -xz`). Record the `Download Latency`.
-4. **Execute (Optional):** Run a mock SWE-bench test command. Record the `Execution Latency`.
-5. **Cleanup:** Delete the claim.
+3. **Execute:** Run a mock SWE-bench test command (since the image already has all testbed/conda files pre-copied). Record the `Execution Latency`.
+4. **Cleanup:** Delete the claim.
 
 At the end of the run, the script will aggregate all recorded latencies (min, max, p50, p90, p99) and output a detailed performance report.
 

@@ -17,7 +17,13 @@ async def worker(client, pool_name, worker_id, tarball_url):
     # 2. Measure download latency
     # In a real run, this would be a real URL. For testing, it could be a small mock URL.
     # The command uses curl and pipes to tar into the /workspace volume created in the template.
-    download_cmd = f"curl -sL '{tarball_url}' | tar -xz -C /workspace"
+    download_cmd = (
+        "python3 -c 'import urllib.request, json, subprocess; "
+        "req = urllib.request.Request(\"http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token\", headers={\"Metadata-Flavor\": \"Google\"}); "
+        "token = json.loads(urllib.request.urlopen(req).read().decode())[\"access_token\"]; "
+        f"req2 = urllib.request.Request(\"{tarball_url}\", headers={{\"Authorization\": f\"Bearer {{token}}\"}}); "
+        "subprocess.Popen([\"tar\", \"-xz\", \"-C\", \"/workspace\"], stdin=urllib.request.urlopen(req2)).wait()'"
+    )
     t1 = time.time()
     await sandbox.commands.run(download_cmd)
     download_latency = time.time() - t1
@@ -44,7 +50,8 @@ async def main():
     
     # Note: Assumes running inside a Pod on the cluster. 
     # For local development against a kind cluster, SandboxGatewayConnectionConfig would be used.
-    config = SandboxInClusterConnectionConfig()
+    from k8s_agent_sandbox.models import SandboxLocalTunnelConnectionConfig
+    config = SandboxLocalTunnelConnectionConfig(namespace="default")
     
     print(f"Starting load test with {args.concurrency} concurrent tasks...")
     t0 = time.time()

@@ -3,8 +3,6 @@ kind: SandboxWarmPool
 metadata:
   name: swe-bench-generic-pool
 spec:
-  templateRef:
+  sandboxTemplateRef:
     name: swe-bench-generic
-  minReplicas: 10
-  maxReplicas: 50
-  strategy: Static
+  replicas: 10
