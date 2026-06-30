@@ -49,8 +49,13 @@ gcloud artifacts repositories create "$REPO_NAME" \
 
 gcloud auth configure-docker "$REGION-docker.pkg.dev" --quiet
 
-
-
+echo "=== 4. Granting GKE nodes access to Artifact Registry ==="
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
+gcloud artifacts repositories add-iam-policy-binding "$REPO_NAME" \
+    --location="$REGION" \
+    --project="$PROJECT_ID" \
+    --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
+    --role="roles/artifactregistry.reader"
 echo "=== 5. Installing Agent Sandbox ==="
 # Clone fresh to avoid version creep
 AGENT_SANDBOX_DIR=$(mktemp -d)
