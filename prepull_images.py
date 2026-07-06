@@ -15,8 +15,18 @@ except ImportError as e:
 
 def main():
     parser = argparse.ArgumentParser(description="Prepull images to GKE cluster using agent-sandbox-rl")
-    parser.add_argument("images", nargs="+", help="List of images to prepull")
+    parser.add_argument("images", nargs="*", help="List of images to prepull")
+    parser.add_argument("--image-file", type=str, help="Path to a text file containing image tags to prepull, one per line")
     args = parser.parse_args()
+
+    if args.image_file and os.path.exists(args.image_file):
+        with open(args.image_file, "r") as f:
+            file_images = [line.strip() for line in f if line.strip()]
+            args.images.extend(file_images)
+            
+    if not args.images:
+        print("Error: No images provided to prepull.")
+        sys.exit(1)
 
     # Uses the ambient kubeconfig
     fleet = SandboxFleet()

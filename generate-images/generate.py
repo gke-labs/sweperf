@@ -160,6 +160,8 @@ def main():
     parser.add_argument("--image-prefix", type=str, default="", help="Prefix for the docker image tag (e.g. 'us-central1-docker.pkg.dev/my-project/repo/')")
     parser.add_argument("--test", action="store_true", help="Run in test mode using local test_trace.json")
     parser.add_argument("--local-trajs-dir", type=str, help="Path to local trajs directory (bypasses GitHub download)")
+    parser.add_argument("--output-list", type=str, help="File to write the list of successfully built/pushed image tags to")
+    parser.add_argument("--output-yaml", type=str, help="Output YAML file for CL2 template overrides")
     args = parser.parse_args()
     
     if args.push and not args.build:
@@ -203,16 +205,16 @@ def main():
         
         # Ensure dependencies are installed
         print("Ensuring dependencies for download_logs are installed...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "boto3", "requests", "urllib3", "tqdm"], check=True)
+        subprocess.run([sys.executable, "-m", "pip", "install", "-i", "https://pypi.org/simple", "boto3", "requests", "urllib3", "tqdm"], check=True)
         
         eval_path = f"evaluation/verified/{args.run}"
         print(f"Running download_logs for {eval_path}...")
         try:
-            subprocess.run([sys.executable, "-m", "analysis.download_logs", eval_path], cwd=repo_dir, check=True)
+            subprocess.run([sys.executable, "-m", "analysis.download_logs", eval_path, "--skip_existing"], cwd=repo_dir, check=True)
         except subprocess.CalledProcessError:
             print(f"Failed to download verified split. Trying lite split...")
             eval_path = f"evaluation/lite/{args.run}"
-            subprocess.run([sys.executable, "-m", "analysis.download_logs", eval_path], cwd=repo_dir, check=True)
+            subprocess.run([sys.executable, "-m", "analysis.download_logs", eval_path, "--skip_existing"], cwd=repo_dir, check=True)
             
         args.local_trajs_dir = os.path.join(repo_dir, eval_path, "trajs")
         
@@ -238,9 +240,24 @@ def main():
         print(f"Limiting to {args.limit} cases.")
         
     success_count = 0
+    successful_tags = []
     for instance_id, url in traj_files:
         if process_instance(instance_id, url, build=args.build, push=args.push, image_prefix=args.image_prefix):
             success_count += 1
+            successful_tags.append(f"{args.image_prefix}swe-agent-replay:{instance_id}")
+            
+    if args.output_list and successful_tags:
+        with open(args.output_list, "w") as f:
+            for tag in successful_tags:
+                f.write(f"{tag}\n")
+        print(f"Wrote {len(successful_tags)} tags to {args.output_list}")
+            
+    if args.output_yaml and successful_tags:
+        with open(args.output_yaml, "w") as f:
+            f.write("SWE_BENCH_IMAGES:\n")
+            for tag in successful_tags:
+                f.write(f"  - \"{tag}\"\n")
+        print(f"Wrote {len(successful_tags)} tags to {args.output_yaml} in CL2 override format")
             
     print(f"\nFinished. Successfully processed {success_count}/{len(traj_files)} cases.")
 

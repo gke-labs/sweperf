@@ -51,7 +51,8 @@ def create_pod_manifest(name, image):
 def main():
     parser = argparse.ArgumentParser(description="Closed-Loop Baseline Benchmark")
     parser.add_argument("--target-pending", type=int, default=2, help="Number of pending pods to maintain")
-    parser.add_argument("--total-pods", type=int, default=50, help="Total number of pods to execute before stopping")
+    parser.add_argument("--total-pods", type=int, default=50, help="Total number of pods to execute (if duration is 0)")
+    parser.add_argument("--duration", type=int, default=0, help="Run duration in seconds (overrides total-pods if > 0)")
     parser.add_argument("--namespace", type=str, default="default", help="Kubernetes namespace")
     args = parser.parse_args()
 
@@ -64,10 +65,14 @@ def main():
         return
 
     logging.info(f"Target pending pods: {args.target_pending}")
-    logging.info(f"Total pods to run: {args.total_pods}")
+    if args.duration > 0:
+        logging.info(f"Benchmark duration: {args.duration} seconds")
+    else:
+        logging.info(f"Total pods to run: {args.total_pods}")
 
     pods_submitted = 0
     pods_completed = 0
+    start_time = time.time()
     
     # State tracking
     pending_pods = set()
@@ -76,9 +81,14 @@ def main():
 
     timestamps = {}  # pod_name -> {created, running, completed}
 
+    def time_is_up():
+        if args.duration > 0:
+            return (time.time() - start_time) >= args.duration
+        return pods_submitted >= args.total_pods
+
     def submit_new_pod():
         nonlocal pods_submitted
-        if pods_submitted >= args.total_pods:
+        if time_is_up():
             return False
             
         pod_name = f"swe-bench-baseline-{uuid.uuid4().hex[:8]}"
@@ -98,7 +108,7 @@ def main():
 
     def check_and_fill_queue():
         # Submit new pods until we hit our target pending count
-        while len(pending_pods) < args.target_pending and pods_submitted < args.total_pods:
+        while len(pending_pods) < args.target_pending and not time_is_up():
             if not submit_new_pod():
                 break
 
@@ -131,15 +141,19 @@ def main():
                 completed_pods.add(name)
                 timestamps[name]["completed"] = time.time()
                 pods_completed += 1
-                logging.info(f"Pod {name} Completed ({pods_completed}/{args.total_pods}).")
+                
+                status_msg = f"Duration: {int(time.time() - start_time)}/{args.duration}s" if args.duration > 0 else f"{pods_completed}/{args.total_pods}"
+                logging.info(f"Pod {name} Completed ({status_msg}).")
 
-        # After state update, check if we need to submit more to maintain the queue
-        if pods_completed >= args.total_pods:
-            logging.info("Reached total target completions.")
+        # Check if we should exit
+        is_draining = time_is_up()
+        if is_draining and len(pending_pods) == 0 and len(running_pods) == 0:
+            logging.info("Time is up and all pods have drained. Exiting watch loop.")
             w.stop()
             break
             
-        check_and_fill_queue()
+        if not is_draining:
+            check_and_fill_queue()
 
     # Report results
     logging.info("\n--- Benchmark Results ---")
@@ -162,6 +176,15 @@ def main():
         execution_times.sort()
         p50_exec = execution_times[int(len(execution_times)*0.5)]
         logging.info(f"Execution Latency (T2-T1): p50 = {p50_exec:.2f}s")
+        
+    # Calculate Throughput
+    all_created = [t["created"] for t in timestamps.values() if "created" in t]
+    all_completed = [t["completed"] for t in timestamps.values() if "completed" in t]
+    
+    if all_created and all_completed:
+        duration = max(all_completed) - min(all_created)
+        throughput_min = (len(all_completed) / duration) * 60
+        logging.info(f"Throughput: {throughput_min:.2f} pods/minute (Total duration: {duration:.2f}s)")
         
     # Cleanup
     logging.info("Cleaning up benchmark pods...")

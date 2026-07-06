@@ -4,30 +4,25 @@ set -eo pipefail
 PROJECT_ID=$1
 REGION=$2
 CLUSTER_NAME=$3
-BUCKET_NAME=$4
-REPO_NAME=$5
-shift 5
-IMAGES=("$@")
+REPO_NAME=$4
+shift 4
+LIMIT=${1:-5}
 
 if [ -z "$REPO_NAME" ]; then
-    echo "Usage: $0 <PROJECT_ID> <REGION> <CLUSTER_NAME> <BUCKET_NAME> <REPO_NAME> [SWE_BENCH_IMAGES...]"
-    echo "Example: $0 my-project us-central1 my-cluster my-swe-bucket my-repo swebench/sweb.eval.x86_64.astropy_1776_astropy-12907"
+    echo "Usage: $0 <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME> [LIMIT]"
+    echo "Example: $0 my-project us-central1 my-cluster my-repo 5"
     exit 1
-fi
-
-if [ ${#IMAGES[@]} -eq 0 ]; then
-    IMAGES=("swebench/sweb.eval.x86_64.astropy_1776_astropy-12907") # Default fallback
 fi
 echo "=== 1. Creating GKE Cluster ==="
 gcloud container clusters create "$CLUSTER_NAME" \
     --project="$PROJECT_ID" \
-    --zone="${REGION}-a" \
+    --zone="${REGION}-b" \
     --machine-type="c4-standard-16" \
     --disk-size="500GB" \
     --disk-type="hyperdisk-balanced" \
     --num-nodes=2 \
-    --scopes="gke-default,storage-rw"
-gcloud container clusters get-credentials "$CLUSTER_NAME" --zone="${REGION}-a" --project="$PROJECT_ID"
+    --scopes="gke-default,storage-rw" || echo "Cluster may already exist."
+gcloud container clusters get-credentials "$CLUSTER_NAME" --zone="${REGION}-b" --project="$PROJECT_ID"
 
 echo "Waiting for cluster API to become reachable..."
 for i in {1..10}; do
@@ -56,7 +51,24 @@ gcloud artifacts repositories add-iam-policy-binding "$REPO_NAME" \
     --project="$PROJECT_ID" \
     --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
     --role="roles/artifactregistry.reader"
-echo "=== 5. Installing Agent Sandbox ==="
+
+echo "=== 5. Generating and Pushing Test Images ==="
+IMAGE_PREFIX="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/"
+GENERATED_IMAGES_FILE="$(pwd)/generated_images.txt"
+
+# Ensure virtual environment exists and activate it
+VENV_DIR="$(dirname "$0")/.venv"
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating virtual environment at $VENV_DIR..."
+    python3 -m venv "$VENV_DIR"
+fi
+source "$VENV_DIR/bin/activate"
+
+pip install -i https://pypi.org/simple -r "$(dirname "$0")/generate-images/requirements.txt"
+GENERATED_YAML_FILE="$(pwd)/generated_images.yaml"
+python3 "$(dirname "$0")/generate-images/generate.py" --build --push --image-prefix "$IMAGE_PREFIX" --output-list "$GENERATED_IMAGES_FILE" --output-yaml "$GENERATED_YAML_FILE" --limit "$LIMIT"
+
+echo "=== 6. Installing Agent Sandbox ==="
 # Clone fresh to avoid version creep
 AGENT_SANDBOX_DIR=$(mktemp -d)
 echo "Cloning fresh agent-sandbox repository to $AGENT_SANDBOX_DIR..."
@@ -75,10 +87,14 @@ echo "Deploying to Kubernetes cluster"
 cd - > /dev/null
 rm -rf "$AGENT_SANDBOX_DIR"
 
-echo "=== 6. Pre-pulling SWE-bench Images to Target Nodes ==="
+echo "=== 7. Pre-pulling SWE-bench Images to Target Nodes ==="
 # Make sure prepull_images.py is executable
 chmod +x "$(dirname "$0")/prepull_images.py"
-"$(dirname "$0")/prepull_images.py" "${IMAGES[@]}"
+if [ -f "$GENERATED_IMAGES_FILE" ]; then
+    "$(dirname "$0")/prepull_images.py" --image-file "$GENERATED_IMAGES_FILE"
+else
+    echo "Warning: $GENERATED_IMAGES_FILE not found, skipping prepull."
+fi
 
 echo "=== Done! Setup Complete. ==="
 echo "Cluster: $CLUSTER_NAME"
