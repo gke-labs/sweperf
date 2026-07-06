@@ -82,8 +82,8 @@ def extract_commands(traj_data):
         
     return commands
 
-def process_instance(instance_id, url_or_path, build=False):
-    """Download trajectory, generate trace and Dockerfile, and optionally build."""
+def process_instance(instance_id, url_or_path, build=False, push=False, image_prefix=""):
+    """Download trajectory, generate trace and Dockerfile, and optionally build and push."""
     safe_id = instance_id.replace("__", "_1776_")
     base_image = f"swebench/sweb.eval.x86_64.{safe_id}:latest"
     
@@ -130,15 +130,24 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
     
     # 4. Build image (optional)
     if build:
-        image_tag = f"swe-agent-replay:{instance_id}"
-        print(f"Building Docker image {image_tag}...")
-        cmd = ["docker", "build", "-t", image_tag, "-f", dockerfile_name, "."]
+        tag_name = f"{image_prefix}swe-agent-replay:{instance_id}"
+        print(f"Building Docker image {tag_name}...")
+        cmd = ["docker", "build", "-t", tag_name, "-f", dockerfile_name, "."]
         try:
             subprocess.run(cmd, check=True)
-            print(f"Successfully built {image_tag}")
+            print(f"Successfully built {tag_name}")
         except subprocess.CalledProcessError as e:
-            print(f"Failed to build {image_tag}: {e}")
+            print(f"Failed to build {tag_name}: {e}")
             return False
+            
+        if push:
+            print(f"Pushing Docker image {tag_name}...")
+            try:
+                subprocess.run(["docker", "push", tag_name], check=True)
+                print(f"Successfully pushed {tag_name}")
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to push {tag_name}: {e}")
+                return False
             
     return True
 
@@ -147,9 +156,15 @@ def main():
     parser.add_argument("--run", type=str, default="20251120_livesweagent_gemini-3-pro-preview", help="Run name in SWE-bench experiments")
     parser.add_argument("--limit", type=int, default=0, help="Max number of cases to process (0 = all)")
     parser.add_argument("--build", action="store_true", help="Actually run docker build (requires docker daemon)")
+    parser.add_argument("--push", action="store_true", help="Push the built images to a remote registry (requires --build)")
+    parser.add_argument("--image-prefix", type=str, default="", help="Prefix for the docker image tag (e.g. 'us-central1-docker.pkg.dev/my-project/repo/')")
     parser.add_argument("--test", action="store_true", help="Run in test mode using local test_trace.json")
     parser.add_argument("--local-trajs-dir", type=str, help="Path to local trajs directory (bypasses GitHub download)")
     args = parser.parse_args()
+    
+    if args.push and not args.build:
+        print("Error: --push requires --build")
+        sys.exit(1)
     
     # Remove proxy env vars to ensure direct internet access works
     for k in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
@@ -224,7 +239,7 @@ def main():
         
     success_count = 0
     for instance_id, url in traj_files:
-        if process_instance(instance_id, url, build=args.build):
+        if process_instance(instance_id, url, build=args.build, push=args.push, image_prefix=args.image_prefix):
             success_count += 1
             
     print(f"\nFinished. Successfully processed {success_count}/{len(traj_files)} cases.")

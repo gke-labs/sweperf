@@ -29,8 +29,10 @@ sudo python3 generate.py --build
 
 ### Flags
 
-- `--local-trajs-dir`: Path to the local directory containing the downloaded `.traj.json` files (can contain nested subdirectories, as the script crawls it recursively).
+- `--local-trajs-dir`: Path to the local directory containing the downloaded `.traj.json` files (can contain nested subdirectories, as the script crawls it recursively). If omitted, the script downloads them automatically.
 - `--build`: If specified, the script will automatically invoke `docker build` to create the final `swe-agent-replay:{instance_id}` image.
+- `--push`: Automatically pushes the built images to a remote registry (requires `--build`).
+- `--image-prefix`: Prefix for the docker image tag. For example, if you set `--image-prefix my-registry/my-repo/`, the image will be tagged as `my-registry/my-repo/swe-agent-replay:{instance_id}`.
 - `--limit <N>`: Limit the number of trajectories processed (useful for testing, e.g., `--limit 1`).
 - `--test`: Generates a dummy `test.Dockerfile` based on `ubuntu:22.04` and replays a mock `test_trace.json` instead of pulling large SWE-bench images.
 
