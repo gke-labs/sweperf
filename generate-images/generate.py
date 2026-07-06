@@ -179,30 +179,38 @@ def main():
 
     traj_files = []
     
-    if args.local_trajs_dir:
-        print(f"Reading local trajectories from {args.local_trajs_dir}...")
-        if not os.path.isdir(args.local_trajs_dir):
-            print(f"Error: Directory {args.local_trajs_dir} not found.")
-            sys.exit(1)
-        for root, dirs, files in os.walk(args.local_trajs_dir):
-            for fname in files:
-                if fname.endswith(".json"):
-                    instance_id = fname.replace(".traj.json", "").replace(".json", "")
-                    traj_files.append((instance_id, os.path.join(root, fname)))
-    else:
-        print("Fetching repository tree...")
-        tree = get_github_tree()
-        if not tree:
-            print("Failed to get tree.")
-            sys.exit(1)
+    if not args.local_trajs_dir:
+        print(f"No --local-trajs-dir provided. Downloading trajectories for {args.run} from S3 via swe-bench/experiments repo...")
+        repo_dir = "swe-bench-experiments-repo"
+        if not os.path.exists(repo_dir):
+            print("Cloning swe-bench/experiments repository...")
+            subprocess.run(["git", "clone", "https://github.com/swe-bench/experiments.git", repo_dir], check=True)
+        
+        # Ensure dependencies are installed
+        print("Ensuring dependencies for download_logs are installed...")
+        subprocess.run([sys.executable, "-m", "pip", "install", "boto3", "requests", "urllib3", "tqdm"], check=True)
+        
+        eval_path = f"evaluation/verified/{args.run}"
+        print(f"Running download_logs for {eval_path}...")
+        try:
+            subprocess.run([sys.executable, "-m", "analysis.download_logs", eval_path], cwd=repo_dir, check=True)
+        except subprocess.CalledProcessError:
+            print(f"Failed to download verified split. Trying lite split...")
+            eval_path = f"evaluation/lite/{args.run}"
+            subprocess.run([sys.executable, "-m", "analysis.download_logs", eval_path], cwd=repo_dir, check=True)
             
-        # Look for trajectory files in the specified run
-        for item in tree:
-            path = item["path"]
-            if args.run in path and "/trajs/" in path and path.endswith(".json"):
-                instance_id = path.split("/")[-1].replace(".json", "")
-                raw_url = f"https://raw.githubusercontent.com/swe-bench/experiments/main/{path}"
-                traj_files.append((instance_id, raw_url))
+        args.local_trajs_dir = os.path.join(repo_dir, eval_path, "trajs")
+        
+    print(f"Reading local trajectories from {args.local_trajs_dir}...")
+    if not os.path.isdir(args.local_trajs_dir):
+        print(f"Error: Directory {args.local_trajs_dir} not found.")
+        sys.exit(1)
+        
+    for root, dirs, files in os.walk(args.local_trajs_dir):
+        for fname in files:
+            if fname.endswith(".json"):
+                instance_id = fname.replace(".traj.json", "").replace(".json", "")
+                traj_files.append((instance_id, os.path.join(root, fname)))
                 
     if not traj_files:
         print(f"No trajectory files found.")

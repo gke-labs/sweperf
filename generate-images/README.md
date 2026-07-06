@@ -11,31 +11,18 @@ This toolkit pulls execution logs (trajectories) from SWE-agent runs against SWE
    pip3 install -r requirements.txt
    ```
 
-## Getting the Trajectories
-
-The SWE-bench team has migrated their execution logs to a public AWS S3 bucket. You must first download the trajectories for the run you wish to process. You can do this by using the official download script from the `swe-bench/experiments` repository:
-
-```bash
-git clone https://github.com/swe-bench/experiments.git
-cd experiments
-pip3 install boto3 requests urllib3 tqdm
-python3 -m analysis.download_logs evaluation/verified/20251120_livesweagent_gemini-3-pro-preview
-```
-
 ## How It Works
 
-1. **`generate.py`** is the main orchestrator script. It scans a directory of `.traj.json` trajectory files, extracts all of the terminal commands executed by the agent (supporting both standard SWE-agent `action` payloads and `gemini-3-pro-preview` markdown blocks), and writes them to a `{instance_id}_trace.json` file.
+1. **`generate.py`** is the main orchestrator script. When run, it will automatically clone the `swe-bench/experiments` repo, download the S3 trajectory logs for the specified run name (falling back to `--local-trajs-dir` if provided), and extract all of the terminal commands executed by the agent (supporting both standard SWE-agent `action` payloads and `gemini-3-pro-preview` markdown blocks), writing them to a `{instance_id}_trace.json` file.
 2. It then generates a `{instance_id}.Dockerfile` that inherits from the official `swebench/sweb.eval.x86_64.{instance_id}` base image.
 3. **`replay.py`** is copied into the Docker image as the entrypoint. It utilizes `pexpect` to spawn a bash pseudo-terminal, simulating keystrokes and executing the trace with realistic visual delays.
 
 ## Usage
 
-You can run `generate.py` directly against the downloaded trajectories directory:
+You can run `generate.py` directly, and it will automatically download the default evaluation trajectories (`20251120_livesweagent_gemini-3-pro-preview`):
 
 ```bash
-sudo python3 generate.py \
-    --local-trajs-dir ../experiments/evaluation/verified/20251120_livesweagent_gemini-3-pro-preview/trajs/ \
-    --build
+sudo python3 generate.py --build
 ```
 
 *(Note: `sudo` is usually required for the `--build` flag so that the Python script can communicate with the local Docker daemon socket).*
