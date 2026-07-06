@@ -1,0 +1,5 @@
+pexpect
+boto3
+requests
+urllib3
+tqdm

@@ -1,0 +1,7 @@
+[
+  {"command": "echo 'Starting SWE-agent replay test...'", "sleep": 1.0},
+  {"command": "ls -la", "sleep": 1.5},
+  {"command": "echo 'This simulates the agent interacting with the container.'", "sleep": 2.0},
+  {"command": "pwd", "sleep": 1.0},
+  {"command": "echo 'Test successful.'", "sleep": 0.5}
+]
