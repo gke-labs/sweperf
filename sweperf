@@ -93,7 +93,7 @@ case "$COMMAND" in
         PROJECT_ID=""
         REGION=""
         REPO_NAME=""
-        LIMIT=5
+        LIMIT=0
         RUN_NAME="20251120_livesweagent_gemini-3-pro-preview"
 
         while [[ "$#" -gt 0 ]]; do

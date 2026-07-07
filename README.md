@@ -25,7 +25,7 @@ To generate the SWE-bench docker images, push them to a registry, and optionally
 * `--project`: Your Google Cloud project ID.
 * `--region`: The Google Cloud region (e.g., `us-central1`).
 * `--repo`: The name of the Artifact Registry repository to push images to.
-* `--limit`: (Optional) The maximum number of images to generate (default: 5).
+* `--limit`: (Optional) The maximum number of images to generate (default: 0 for all).
 * `--run`: (Optional) The SWE-bench experiment run name to pull trajectories from.
 
 *Note: By default, it uses trajectories from `20251120_livesweagent_gemini-3-pro-preview`. You can specify a different run from the SWE-bench experiments repository using the `--run` flag.*
