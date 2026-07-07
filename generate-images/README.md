@@ -44,3 +44,12 @@ Once an image is built, you can run it interactively to watch the agent's trajec
 sudo docker run -it --rm swe-agent-replay:<instance_id>
 ```
 *(Example: `sudo docker run -it --rm swe-agent-replay:pydata__xarray-4356`)*
+
+### Wait for Claim Mode
+
+To simulate use in a warm pool (e.g., Kubernetes Agent Sandbox), you can start the container in a paused state until it receives a claim signal. By setting the `WAIT_FOR_CLAIM_FILE` environment variable to a file path, the script will loop indefinitely until that file exists and contains `agents.x-k8s.io/sandbox-id`.
+
+```bash
+sudo docker run -it --rm -e WAIT_FOR_CLAIM_FILE=/tmp/claim.txt swe-agent-replay:<instance_id>
+```
+*(The execution will pause until you inject the signal: `echo "agents.x-k8s.io/sandbox-id" > /tmp/claim.txt` into the container)*

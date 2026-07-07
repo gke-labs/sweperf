@@ -77,6 +77,28 @@ env:
 
 To floor out the latency for extreme churn testing (e.g. constant 0.5s delay), you can set `LLM_LATENCY_MU` to a large negative number like `"-5"`, or explicitly set `LLM_LATENCY_MIN` and a negative `LLM_LATENCY_MU`.
 
+### 4. Wait for Claim (Agent Sandbox Integration)
+
+To use the generated images seamlessly with [Agent Sandbox's warm pools](https://github.com/kubernetes-sigs/agent-sandbox), the replay engine can be configured to block execution until the Pod is formally claimed and assigned to a user.
+
+Set the `WAIT_FOR_CLAIM_FILE` environment variable to a file path containing the downward API labels (e.g. `/etc/podinfo/labels`). The replay script will loop indefinitely until it finds the `agents.x-k8s.io/sandbox-id` label inside that file, which is the platform signal injected by Agent Sandbox upon a successful claim.
+
+```yaml
+env:
+- name: WAIT_FOR_CLAIM_FILE
+  value: "/etc/podinfo/labels"
+volumeMounts:
+- name: podinfo
+  mountPath: /etc/podinfo
+volumes:
+- name: podinfo
+  downwardAPI:
+    items:
+    - path: "labels"
+      fieldRef:
+        fieldPath: metadata.labels
+```
+
 ## Testing
 
 To run the local unit tests that verify the `replay.py` execution within a dummy Docker container using `pexpect`:
