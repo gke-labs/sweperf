@@ -1,1 +1,19 @@
-gemini.key
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Generated outputs from setup and runs
+*_trace.json
+*.Dockerfile
+generated_images.txt
+generated_images.yaml
+node_metrics.txt
+report.md
+
+# Temporary cloned repositories
+swe-bench-experiments-repo/
+agent-sandbox/
