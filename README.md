@@ -20,6 +20,14 @@ To generate the SWE-bench docker images, push them to a registry, and optionally
 ```bash
 ./sweperf generate-images --project <PROJECT_ID> --region <REGION> --repo <REPO_NAME> [--limit <LIMIT>] [--run <RUN_NAME>]
 ```
+
+**Options:**
+* `--project`: Your Google Cloud project ID.
+* `--region`: The Google Cloud region (e.g., `us-central1`).
+* `--repo`: The name of the Artifact Registry repository to push images to.
+* `--limit`: (Optional) The maximum number of images to generate (default: 5).
+* `--run`: (Optional) The SWE-bench experiment run name to pull trajectories from.
+
 *Note: By default, it uses trajectories from `20251120_livesweagent_gemini-3-pro-preview`. You can specify a different run from the SWE-bench experiments repository using the `--run` flag.*
 *This utilizes the `generate-images/generate.py` script under the hood to build images with the injected replay engine and trajectory traces.*
 
@@ -50,13 +58,21 @@ The `run-benchmark` subcommand spins up a stateless submitter alongside a metric
 
 ### 3. Modifying Agent Latency (Extreme Churn Testing)
 
-If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, you can override the distribution to floor out at a fixed `0.5s` delay. Edit `benchmark/pod_template.yaml` and add the following environment variable to the container spec:
+If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, or if you want to test different latency profiles, you can override the distribution parameters. The timing is completely parameterizable via environment variables in the container spec. 
+
+Edit `benchmark/pod_template.yaml` and add the following environment variables (these are the defaults):
 
 ```yaml
 env:
 - name: LLM_LATENCY_MU
-  value: "-5"
+  value: "2.0414"
+- name: LLM_LATENCY_SIGMA
+  value: "0.8674"
+- name: LLM_LATENCY_MIN
+  value: "0.5"
 ```
+
+To floor out the latency for extreme churn testing (e.g. constant 0.5s delay), you can set `LLM_LATENCY_MU` to a large negative number like `"-5"`, or explicitly set `LLM_LATENCY_MIN` and a negative `LLM_LATENCY_MU`.
 
 ## Testing
 
