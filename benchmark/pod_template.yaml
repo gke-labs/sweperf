@@ -7,6 +7,11 @@ spec:
   containers:
   - name: swebench
     image: {{IMAGE}}
+    env:
+    - name: LLM_LATENCY_MU
+      value: "2.0414"
+    - name: LLM_LATENCY_SIGMA
+      value: "0.8674"
     volumeMounts:
     - name: replay-script-vol
       mountPath: /replay.py
