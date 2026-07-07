@@ -1,34 +1,44 @@
 # SWE-perf
 
-SWE-perf is a Kubernetes-based load testing and benchmarking framework designed to evaluate infrastructure performance under the heavy, bursty load of autonomous coding agents (such as SWE-agent).
+SWE-perf generates Docker containers that run SWE-bench derived workloads to emulate the behavior of autonomous coding agents (like SWE-agent). It also provides an optional Kubernetes-based benchmarking framework to evaluate infrastructure performance under the heavy, bursty load of these agents.
 
-## Architecture
+## Core Feature: Workload Image Generation
 
-*   **High-Density GKE Cluster**: The test cluster is automatically configured with a high-density footprint (`--default-max-pods-per-node=256`). This allows us to massively stress the Kubernetes scheduler and evaluate high-concurrency pod churn without hitting standard secondary IP allocation limits.
-*   **Agent Sandbox**: We leverage [kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox) to safely execute untrusted agent actions inside isolated pods.
-*   **Log-Normal Replay Engine (`replay.py`)**: A python script that lives inside a Kubernetes ConfigMap and is mounted directly into the benchmark pods. It takes a pre-recorded agent trajectory, simulates character-by-character shell typing, and synthesizes highly realistic LLM latency (think time) using a log-normal distribution.
-*   **Stateless Submitter (`benchmark/submitter.sh`)**: A robust, lightweight bash controller that queries the Kubernetes API and maintains a strict concurrent pod limit over a user-defined time window, automatically backfilling pods as they complete.
-*   **Metrics Collector**: A parallel background process that records `kubectl top nodes` throughout the benchmark and automatically processes Average, Max, and P90 CPU and RAM statistics upon completion.
+The most critical component of SWE-perf is the image generation engine. It creates standalone Docker images that perfectly replicate an autonomous agent interacting with a codebase. 
 
-## Usage
+Instead of running an expensive LLM in the loop, the generated containers use a **Log-Normal Replay Engine** (`benchmark/replay.py`). This engine:
+1. Takes a pre-recorded agent trajectory (commands run during a SWE-bench task).
+2. Simulates character-by-character shell typing using `pexpect` against a bash session.
+3. Synthesizes highly realistic LLM latency (think time) between commands using a log-normal distribution derived from real-world agent trajectories (averaging ~15.6s).
+
+These standalone containers can be deployed in any environment to simulate realistic AI agent workloads without requiring an actual LLM backend or API keys.
+
+### Usage: Generating Images
+
+To generate the SWE-bench docker images, push them to a registry, and optionally pre-pull them onto nodes:
+
+```bash
+./sweperf generate-images <PROJECT_ID> <REGION> <REPO_NAME> [IMAGE_LIMIT]
+```
+*Note: This utilizes the `generate-images/generate.py` script under the hood to build images with the injected replay engine and trajectory traces.*
+
+---
+
+## Optional: Cluster Infrastructure & Benchmarking
+
+While the generated images can be used anywhere, SWE-perf also includes scripts to provision a high-density GKE cluster and run structured load tests.
 
 ### 1. Environment Setup
 
-The `sweperf` script automates the entire provisioning process across two subcommands.
+Create a GKE cluster with a high-density footprint (`--default-max-pods-per-node=256`) and install the [agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox) to safely execute untrusted actions inside isolated pods:
 
-First, create the GKE cluster and install the agent-sandbox:
 ```bash
 ./sweperf create-cluster <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME>
 ```
 
-Next, generate the SWE-bench docker images, push them to the registry, and prepull them onto the nodes to prevent cold-start skew:
-```bash
-./sweperf generate-images <PROJECT_ID> <REGION> <REPO_NAME> [IMAGE_LIMIT]
-```
-
 ### 2. Running a Benchmark
 
-The easiest way to execute a test is via the `run-benchmark` subcommand, which automatically spins up the submitter alongside the metrics collector.
+The `run-benchmark` subcommand spins up a stateless submitter alongside a metrics collector. The submitter queries the Kubernetes API and maintains a strict concurrent pod limit over a user-defined time window, automatically backfilling pods as they complete.
 
 ```bash
 ./sweperf run-benchmark <DURATION_SECONDS> <CONCURRENCY>
@@ -38,8 +48,6 @@ The easiest way to execute a test is via the `run-benchmark` subcommand, which a
 ```
 
 ### 3. Modifying Agent Latency (Extreme Churn Testing)
-
-By default, the `replay.py` script natively emulates realistic LLM latency averaging ~15.6s of sleep between executed bash commands (derived from real-world agent trajectories).
 
 If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, you can override the distribution to floor out at a fixed `0.5s` delay. Edit `benchmark/pod_template.yaml` and add the following environment variable to the container spec:
 
@@ -54,8 +62,5 @@ env:
 To run the local unit tests that verify the `replay.py` execution within a dummy Docker container using `pexpect`:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install pytest pexpect
-pytest tests/test_replay.py
+python3 -m unittest discover -s tests
 ```
