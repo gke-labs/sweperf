@@ -114,9 +114,9 @@ case "$COMMAND" in
         python3 "$(dirname "$0")/generate-images/generate.py" --build --push --image-prefix "$IMAGE_PREFIX" --output-list "$GENERATED_IMAGES_FILE" --output-yaml "$GENERATED_YAML_FILE" --limit "$LIMIT"
 
         echo "=== 2. Pre-pulling SWE-bench Images to Target Nodes ==="
-        chmod +x "$(dirname "$0")/prepull_images.py"
+        chmod +x "$(dirname "$0")/generate-images/prepull_images.py"
         if [ -f "$GENERATED_IMAGES_FILE" ]; then
-            "$(dirname "$0")/prepull_images.py" --image-file "$GENERATED_IMAGES_FILE"
+            "$(dirname "$0")/generate-images/prepull_images.py" --image-file "$GENERATED_IMAGES_FILE"
         else
             echo "Warning: $GENERATED_IMAGES_FILE not found, skipping prepull."
         fi
@@ -151,7 +151,7 @@ case "$COMMAND" in
         wait $METRICS_PID 2>/dev/null || true
 
         echo "Generating report..."
-        python3 process_metrics.py > report.md
+        python3 benchmark/process_metrics.py > report.md
         cat report.md
         ;;
 

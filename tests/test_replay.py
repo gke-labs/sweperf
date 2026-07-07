@@ -10,7 +10,7 @@ class TestReplayScript(unittest.TestCase):
         # We need the path to the real replay script
         # Assuming this test runs from the root of the repo or from tests/
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        replay_script_src = os.path.join(repo_root, 'generate-images', 'replay.py')
+        replay_script_src = os.path.join(repo_root, 'benchmark', 'replay.py')
         
         self.assertTrue(os.path.exists(replay_script_src), f"Replay script not found at {replay_script_src}")
         
