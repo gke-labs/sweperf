@@ -2,10 +2,9 @@ import collections
 import math
 import sys
 
-data = collections.defaultdict(lambda: {'cpu': [], 'ram': []})
-
-with open('node_metrics.txt', 'r') as f:
-    for line in f:
+def parse_metrics(lines):
+    data = collections.defaultdict(lambda: {'cpu': [], 'ram': []})
+    for line in lines:
         parts = line.strip().split()
         if len(parts) >= 5:
             node = parts[0]
@@ -31,6 +30,7 @@ with open('node_metrics.txt', 'r') as f:
 
             data[node]['cpu'].append(cpu)
             data[node]['ram'].append(ram)
+    return data
 
 def percentile(N, percent, key=lambda x:x):
     if not N:
@@ -44,23 +44,36 @@ def percentile(N, percent, key=lambda x:x):
     d1 = key(N[int(c)]) * (k-f)
     return d0+d1
 
-print("### Node Resource Usage Report (20-minute run with 512 pods)")
-print()
-for node, metrics in data.items():
-    cpus = sorted(metrics['cpu'])
-    rams = sorted(metrics['ram'])
-    if not cpus:
-        continue
-    
-    cpu_avg = sum(cpus) / len(cpus)
-    cpu_max = cpus[-1]
-    cpu_p90 = percentile(cpus, 0.90)
-    
-    ram_avg = sum(rams) / len(rams)
-    ram_max = rams[-1]
-    ram_p90 = percentile(rams, 0.90)
-    
-    print(f"**Node:** `{node}`")
-    print(f"- **CPU (millicores):** Avg: {cpu_avg:.1f}, Max: {cpu_max}, P90: {cpu_p90:.1f}")
-    print(f"- **RAM (MiB):**        Avg: {ram_avg:.1f}, Max: {ram_max}, P90: {ram_p90:.1f}")
-    print()
+def process_metrics(data):
+    report = []
+    report.append("### Node Resource Usage Report")
+    report.append("")
+    for node, metrics in data.items():
+        cpus = sorted(metrics['cpu'])
+        rams = sorted(metrics['ram'])
+        if not cpus:
+            continue
+        
+        cpu_avg = sum(cpus) / len(cpus)
+        cpu_max = cpus[-1]
+        cpu_p90 = percentile(cpus, 0.90)
+        
+        ram_avg = sum(rams) / len(rams)
+        ram_max = rams[-1]
+        ram_p90 = percentile(rams, 0.90)
+        
+        report.append(f"**Node:** `{node}`")
+        report.append(f"- **CPU (millicores):** Avg: {cpu_avg:.1f}, Max: {cpu_max}, P90: {cpu_p90:.1f}")
+        report.append(f"- **RAM (MiB):**        Avg: {ram_avg:.1f}, Max: {ram_max}, P90: {ram_p90:.1f}")
+        report.append("")
+    return "\n".join(report)
+
+if __name__ == "__main__":
+    try:
+        with open('node_metrics.txt', 'r') as f:
+            lines = f.readlines()
+            data = parse_metrics(lines)
+            print(process_metrics(data))
+    except FileNotFoundError:
+        print("node_metrics.txt not found.")
+        sys.exit(1)

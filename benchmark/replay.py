@@ -15,6 +15,22 @@ def simulate_typing(command):
     sys.stdout.flush()
 
 def main():
+    if os.environ.get("WAIT_FOR_CLAIM_FILE"):
+        claim_file = os.environ.get("WAIT_FOR_CLAIM_FILE")
+        print(f"Waiting for claim signal in {claim_file}...")
+        sys.stdout.flush()
+        while True:
+            if os.path.exists(claim_file):
+                try:
+                    with open(claim_file, 'r') as f:
+                        if 'agents.x-k8s.io/sandbox-id' in f.read():
+                            print("Claim signal received!")
+                            sys.stdout.flush()
+                            break
+                except Exception:
+                    pass
+            time.sleep(1)
+
     if len(sys.argv) != 2:
         print("Usage: python3 replay.py <trace.json>")
         sys.exit(1)

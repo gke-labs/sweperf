@@ -70,5 +70,55 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
             print(f"Cleaning up docker image {image_name}...")
             subprocess.run(["docker", "rmi", image_name], capture_output=True)
 
+    def test_replay_wait_for_claim(self):
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        replay_script_src = os.path.join(repo_root, 'benchmark', 'replay.py')
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            trace = ["echo 'post_claim_execution_123'"]
+            trace_path = os.path.join(temp_dir, "trace.json")
+            with open(trace_path, "w") as f:
+                json.dump(trace, f)
+                
+            replay_script_dest = os.path.join(temp_dir, "replay.py")
+            shutil.copy(replay_script_src, replay_script_dest)
+            
+            dockerfile_content = """
+FROM python:3.9-slim
+RUN pip install pexpect
+COPY replay.py /replay.py
+COPY trace.json /trace.json
+ENV LLM_LATENCY_MU=-5
+ENV LLM_LATENCY_SIGMA=0.1
+ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
+"""
+            dockerfile_path = os.path.join(temp_dir, "Dockerfile")
+            with open(dockerfile_path, "w") as f:
+                f.write(dockerfile_content)
+                
+            image_name = "test-replay-claim-image:latest"
+            subprocess.run(["docker", "build", "-t", image_name, "."], cwd=temp_dir, capture_output=True, check=True)
+            
+            import time
+            run_cmd = ["docker", "run", "-d", "-e", "WAIT_FOR_CLAIM_FILE=/tmp/claim.txt", image_name]
+            run_result = subprocess.run(run_cmd, capture_output=True, text=True, check=True)
+            container_id = run_result.stdout.strip()
+            
+            try:
+                time.sleep(2)
+                logs_before = subprocess.run(["docker", "logs", container_id], capture_output=True, text=True).stdout
+                self.assertNotIn("post_claim_execution_123", logs_before, "Should not execute before claim")
+                self.assertIn("Waiting for claim signal in /tmp/claim.txt...", logs_before, "Should print waiting message")
+                
+                subprocess.run(["docker", "exec", container_id, "sh", "-c", "echo 'agents.x-k8s.io/sandbox-id' > /tmp/claim.txt"], check=True)
+                
+                time.sleep(3)
+                logs_after = subprocess.run(["docker", "logs", container_id], capture_output=True, text=True).stdout
+                self.assertIn("Claim signal received!", logs_after, "Should print claim received message")
+                self.assertIn("post_claim_execution_123", logs_after, "Should execute after claim")
+            finally:
+                subprocess.run(["docker", "rm", "-f", container_id], capture_output=True)
+                subprocess.run(["docker", "rmi", image_name], capture_output=True)
+
 if __name__ == '__main__':
     unittest.main()
