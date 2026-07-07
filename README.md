@@ -34,6 +34,45 @@ To generate the SWE-bench docker images, push them to a registry, and optionally
 *Note: By default, it uses trajectories from `20251120_livesweagent_gemini-3-pro-preview`. You can specify a different run from the SWE-bench experiments repository using the `--run` flag.*
 *This utilizes the `generate-images/generate.py` script under the hood to build images with the injected replay engine and trajectory traces.*
 
+### Image Properties: Modifying Agent Latency (Extreme Churn Testing)
+
+If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, or if you want to test different latency profiles, you can override the distribution parameters. The timing is completely parameterizable via environment variables when running the container (these are the defaults):
+
+```yaml
+env:
+- name: LLM_LATENCY_MU
+  value: "2.0414"
+- name: LLM_LATENCY_SIGMA
+  value: "0.8674"
+- name: LLM_LATENCY_MIN
+  value: "0.5"
+```
+
+To floor out the latency for extreme churn testing (e.g. constant 0.5s delay), you can set `LLM_LATENCY_MU` to a large negative number like `"-5"`, or explicitly set `LLM_LATENCY_MIN` and a negative `LLM_LATENCY_MU`.
+
+### Image Properties: Wait for Claim (Agent Sandbox Integration)
+
+To use the generated images seamlessly with [Agent Sandbox's warm pools](https://github.com/kubernetes-sigs/agent-sandbox), the replay engine can be configured to block execution until the Pod is formally claimed and assigned to a user.
+
+Set the `WAIT_FOR_CLAIM_FILE` environment variable to a file path containing the downward API labels (e.g. `/etc/podinfo/labels`). The replay script will loop indefinitely until it finds the `agents.x-k8s.io/sandbox-id` label inside that file, which is the platform signal injected by Agent Sandbox upon a successful claim.
+
+Example for a pod spec:
+```yaml
+env:
+- name: WAIT_FOR_CLAIM_FILE
+  value: "/etc/podinfo/labels"
+volumeMounts:
+- name: podinfo
+  mountPath: /etc/podinfo
+volumes:
+- name: podinfo
+  downwardAPI:
+    items:
+    - path: "labels"
+      fieldRef:
+        fieldPath: metadata.labels
+```
+
 ---
 
 ## Optional: Cluster Infrastructure & Benchmarking
@@ -57,46 +96,6 @@ The `run-benchmark` subcommand spins up a stateless submitter alongside a metric
 
 # Example (20 minutes with 512 active pods):
 # ./sweperf run-benchmark 1200 512
-```
-
-### 3. Modifying Agent Latency (Extreme Churn Testing)
-
-If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, or if you want to test different latency profiles, you can override the distribution parameters. The timing is completely parameterizable via environment variables in the container spec. 
-
-Edit `benchmark/pod_template.yaml` and add the following environment variables (these are the defaults):
-
-```yaml
-env:
-- name: LLM_LATENCY_MU
-  value: "2.0414"
-- name: LLM_LATENCY_SIGMA
-  value: "0.8674"
-- name: LLM_LATENCY_MIN
-  value: "0.5"
-```
-
-To floor out the latency for extreme churn testing (e.g. constant 0.5s delay), you can set `LLM_LATENCY_MU` to a large negative number like `"-5"`, or explicitly set `LLM_LATENCY_MIN` and a negative `LLM_LATENCY_MU`.
-
-### 4. Wait for Claim (Agent Sandbox Integration)
-
-To use the generated images seamlessly with [Agent Sandbox's warm pools](https://github.com/kubernetes-sigs/agent-sandbox), the replay engine can be configured to block execution until the Pod is formally claimed and assigned to a user.
-
-Set the `WAIT_FOR_CLAIM_FILE` environment variable to a file path containing the downward API labels (e.g. `/etc/podinfo/labels`). The replay script will loop indefinitely until it finds the `agents.x-k8s.io/sandbox-id` label inside that file, which is the platform signal injected by Agent Sandbox upon a successful claim.
-
-```yaml
-env:
-- name: WAIT_FOR_CLAIM_FILE
-  value: "/etc/podinfo/labels"
-volumeMounts:
-- name: podinfo
-  mountPath: /etc/podinfo
-volumes:
-- name: podinfo
-  downwardAPI:
-    items:
-    - path: "labels"
-      fieldRef:
-        fieldPath: metadata.labels
 ```
 
 ## Testing
