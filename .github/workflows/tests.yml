@@ -20,4 +20,5 @@ jobs:
         
     - name: Run tests
       run: |
+        pip install pexpect
         python -m unittest discover -s tests
