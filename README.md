@@ -18,9 +18,10 @@ These standalone containers can be deployed in any environment to simulate reali
 To generate the SWE-bench docker images, push them to a registry, and optionally pre-pull them onto nodes:
 
 ```bash
-./sweperf generate-images <PROJECT_ID> <REGION> <REPO_NAME> [IMAGE_LIMIT]
+./sweperf generate-images --project <PROJECT_ID> --region <REGION> --repo <REPO_NAME> [--limit <LIMIT>] [--run <RUN_NAME>]
 ```
-*Note: This utilizes the `generate-images/generate.py` script under the hood to build images with the injected replay engine and trajectory traces.*
+*Note: By default, it uses trajectories from `20251120_livesweagent_gemini-3-pro-preview`. You can specify a different run from the SWE-bench experiments repository using the `--run` flag.*
+*This utilizes the `generate-images/generate.py` script under the hood to build images with the injected replay engine and trajectory traces.*
 
 ---
 

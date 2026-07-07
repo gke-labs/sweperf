@@ -6,7 +6,8 @@ usage() {
     echo ""
     echo "Commands:"
     echo "  create-cluster <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME>   Creates GKE cluster and installs sandbox"
-    echo "  generate-images <PROJECT_ID> <REGION> <REPO_NAME> [LIMIT]         Generates, pushes, and prepulls SWE-bench images"
+    echo "  generate-images --project <PROJECT> --region <REGION> --repo <REPO> [--limit LIMIT] [--run RUN_NAME]"
+    echo "                                                                    Generates, pushes, and prepulls SWE-bench images"
     echo "  run-benchmark <DURATION_SECONDS> <CONCURRENCY>                    Runs the benchmark and collects metrics"
     echo ""
     exit 1
@@ -89,14 +90,29 @@ case "$COMMAND" in
         ;;
 
     generate-images)
-        if [ "$#" -lt 3 ]; then
-            echo "Usage: $0 generate-images <PROJECT_ID> <REGION> <REPO_NAME> [LIMIT]"
+        PROJECT_ID=""
+        REGION=""
+        REPO_NAME=""
+        LIMIT=5
+        RUN_NAME="20251120_livesweagent_gemini-3-pro-preview"
+
+        while [[ "$#" -gt 0 ]]; do
+            case $1 in
+                --project) PROJECT_ID="$2"; shift ;;
+                --region) REGION="$2"; shift ;;
+                --repo) REPO_NAME="$2"; shift ;;
+                --limit) LIMIT="$2"; shift ;;
+                --run) RUN_NAME="$2"; shift ;;
+                *) echo "Unknown parameter passed: $1"; exit 1 ;;
+            esac
+            shift
+        done
+
+        if [ -z "$PROJECT_ID" ] || [ -z "$REGION" ] || [ -z "$REPO_NAME" ]; then
+            echo "Usage: $0 generate-images --project <PROJECT_ID> --region <REGION> --repo <REPO_NAME> [--limit <LIMIT>] [--run <RUN_NAME>]"
+            echo "  --run defaults to 20251120_livesweagent_gemini-3-pro-preview"
             exit 1
         fi
-        PROJECT_ID=$1
-        REGION=$2
-        REPO_NAME=$3
-        LIMIT=${4:-5}
 
         echo "=== 1. Generating and Pushing Test Images ==="
         IMAGE_PREFIX="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/"
@@ -111,7 +127,7 @@ case "$COMMAND" in
 
         pip install -i https://pypi.org/simple -r "$(dirname "$0")/generate-images/requirements.txt"
         GENERATED_YAML_FILE="$(pwd)/generated_images.yaml"
-        python3 "$(dirname "$0")/generate-images/generate.py" --build --push --image-prefix "$IMAGE_PREFIX" --output-list "$GENERATED_IMAGES_FILE" --output-yaml "$GENERATED_YAML_FILE" --limit "$LIMIT"
+        python3 "$(dirname "$0")/generate-images/generate.py" --build --push --image-prefix "$IMAGE_PREFIX" --output-list "$GENERATED_IMAGES_FILE" --output-yaml "$GENERATED_YAML_FILE" --limit "$LIMIT" --run "$RUN_NAME"
 
         echo "=== 2. Pre-pulling SWE-bench Images to Target Nodes ==="
         chmod +x "$(dirname "$0")/generate-images/prepull_images.py"
