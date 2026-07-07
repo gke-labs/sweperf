@@ -5,6 +5,8 @@ import urllib.request
 import argparse
 import subprocess
 import time
+import concurrent.futures
+
 
 def get_github_tree():
     """Fetch the full tree of swe-bench/experiments main branch."""
@@ -148,13 +150,24 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
             except subprocess.CalledProcessError as e:
                 print(f"Failed to push {tag_name}: {e}")
                 return False
+
+        print(f"Cleaning up local image {tag_name} to save disk space...")
+        subprocess.run(["docker", "rmi", tag_name], check=False)
+        print(f"Cleaning up base image {base_image} to save disk space...")
+        subprocess.run(["docker", "rmi", base_image], check=False)
             
+    if os.path.exists(trace_filename):
+        os.remove(trace_filename)
+    if os.path.exists(dockerfile_name):
+        os.remove(dockerfile_name)
+        
     return True
 
 def main():
     parser = argparse.ArgumentParser(description="Generate replay Docker images for SWE-bench cases.")
     parser.add_argument("--run", type=str, default="20251120_livesweagent_gemini-3-pro-preview", help="Run name in SWE-bench experiments")
     parser.add_argument("--limit", type=int, default=0, help="Max number of cases to process (0 = all)")
+    parser.add_argument("--workers", type=int, default=8, help="Number of parallel workers for building images")
     parser.add_argument("--build", action="store_true", help="Actually run docker build (requires docker daemon)")
     parser.add_argument("--push", action="store_true", help="Push the built images to a remote registry (requires --build)")
     parser.add_argument("--image-prefix", type=str, default="", help="Prefix for the docker image tag (e.g. 'us-central1-docker.pkg.dev/my-project/repo/')")
@@ -208,13 +221,26 @@ def main():
         subprocess.run([sys.executable, "-m", "pip", "install", "-i", "https://pypi.org/simple", "boto3", "requests", "urllib3", "tqdm"], check=True)
         
         eval_path = f"evaluation/verified/{args.run}"
-        print(f"Running download_logs for {eval_path}...")
-        try:
-            subprocess.run([sys.executable, "-m", "analysis.download_logs", eval_path, "--skip_existing"], cwd=repo_dir, check=True)
-        except subprocess.CalledProcessError:
-            print(f"Failed to download verified split. Trying lite split...")
-            eval_path = f"evaluation/lite/{args.run}"
-            subprocess.run([sys.executable, "-m", "analysis.download_logs", eval_path, "--skip_existing"], cwd=repo_dir, check=True)
+        marker_file = os.path.join(repo_dir, eval_path, ".download_success")
+        
+        if os.path.exists(marker_file):
+            print(f"Trajectories for {eval_path} already downloaded. Skipping.")
+        else:
+            print(f"Running download_logs for {eval_path}...")
+            try:
+                subprocess.run([sys.executable, "-m", "analysis.download_logs", eval_path, "--skip_existing"], cwd=repo_dir, check=True)
+                with open(marker_file, "w") as f:
+                    f.write("done\n")
+            except subprocess.CalledProcessError:
+                print(f"Failed to download verified split. Trying lite split...")
+                eval_path = f"evaluation/lite/{args.run}"
+                marker_file = os.path.join(repo_dir, eval_path, ".download_success")
+                if os.path.exists(marker_file):
+                    print(f"Trajectories for {eval_path} already downloaded. Skipping.")
+                else:
+                    subprocess.run([sys.executable, "-m", "analysis.download_logs", eval_path, "--skip_existing"], cwd=repo_dir, check=True)
+                    with open(marker_file, "w") as f:
+                        f.write("done\n")
             
         args.local_trajs_dir = os.path.join(repo_dir, eval_path, "trajs")
         
@@ -241,10 +267,22 @@ def main():
         
     success_count = 0
     successful_tags = []
-    for instance_id, url in traj_files:
-        if process_instance(instance_id, url, build=args.build, push=args.push, image_prefix=args.image_prefix):
-            success_count += 1
-            successful_tags.append(f"{args.image_prefix}swe-agent-replay:{instance_id}")
+    
+    print(f"Starting parallel processing with {args.workers} workers...")
+    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
+        future_to_instance = {
+            executor.submit(process_instance, instance_id, url, build=args.build, push=args.push, image_prefix=args.image_prefix): instance_id
+            for instance_id, url in traj_files
+        }
+        
+        for future in concurrent.futures.as_completed(future_to_instance):
+            instance_id = future_to_instance[future]
+            try:
+                if future.result():
+                    success_count += 1
+                    successful_tags.append(f"{args.image_prefix}swe-agent-replay:{instance_id}")
+            except Exception as e:
+                print(f"Error processing {instance_id}: {e}")
             
     if args.output_list and successful_tags:
         with open(args.output_list, "w") as f:
