@@ -9,11 +9,3 @@ spec:
   containers:
   - name: swebench
     image: {{IMAGE}}
-    volumeMounts:
-    - name: replay-script-vol
-      mountPath: /replay.py
-      subPath: replay.py
-  volumes:
-  - name: replay-script-vol
-    configMap:
-      name: replay-script
