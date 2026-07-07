@@ -159,6 +159,7 @@ case "$COMMAND" in
         wait $METRICS_PID 2>/dev/null || true
 
         echo "Generating report..."
+        kubectl get pods -l app=swebench -o json > pods.json 2>/dev/null || true
         python3 benchmark/process_metrics.py > report.md
         cat report.md
         ;;

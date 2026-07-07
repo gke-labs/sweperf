@@ -5,7 +5,9 @@ import os
 repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(repo_root, "benchmark"))
 
-from process_metrics import parse_metrics, percentile, process_metrics
+import tempfile
+import json
+from process_metrics import parse_metrics, percentile, process_metrics, parse_job_metrics, process_job_metrics
 
 class TestMetrics(unittest.TestCase):
     def test_parse_metrics(self):
@@ -35,6 +37,76 @@ class TestMetrics(unittest.TestCase):
         self.assertIn("**Node:** `node-1`", report)
         self.assertIn("Avg: 150.0", report)
         self.assertIn("Max: 200", report)
+
+    def test_parse_job_metrics(self):
+        data = {
+            "items": [
+                {
+                    "metadata": {"creationTimestamp": "2023-10-10T12:00:00Z"},
+                    "status": {
+                        "startTime": "2023-10-10T12:00:05Z",
+                        "containerStatuses": [{
+                            "state": {
+                                "terminated": {
+                                    "finishedAt": "2023-10-10T12:01:05Z",
+                                    "exitCode": 0
+                                }
+                            }
+                        }]
+                    }
+                },
+                {
+                    "metadata": {"creationTimestamp": "2023-10-10T12:01:00Z"},
+                    "status": {
+                        "startTime": "2023-10-10T12:01:10Z",
+                        "containerStatuses": [{
+                            "state": {
+                                "terminated": {
+                                    "finishedAt": "2023-10-10T12:01:40Z",
+                                    "exitCode": 1,
+                                    "reason": "OOMKilled"
+                                }
+                            }
+                        }]
+                    }
+                }
+            ]
+        }
+        
+        with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
+            json.dump(data, f)
+            temp_name = f.name
+            
+        try:
+            metrics = parse_job_metrics(temp_name)
+            self.assertEqual(metrics["lengths"], [60.0, 30.0])
+            self.assertEqual(metrics["pending_times"], [5.0, 10.0])
+            self.assertEqual(metrics["succeeded"], 1)
+            self.assertEqual(metrics["failed"], 1)
+            self.assertEqual(metrics["oom_killed"], 1)
+            self.assertEqual(metrics["other_errors"], 0)
+        finally:
+            os.remove(temp_name)
+
+    def test_process_job_metrics(self):
+        metrics = {
+            'lengths': [60.0, 30.0],
+            'pending_times': [5.0, 10.0],
+            'earliest_start': None,
+            'latest_end': None,
+            'succeeded': 1,
+            'failed': 1,
+            'oom_killed': 1,
+            'other_errors': 0,
+        }
+        report = process_job_metrics(metrics)
+        self.assertIn("Completed Jobs:** 2", report)
+        self.assertIn("Succeeded: 1", report)
+        self.assertIn("Failed: 1", report)
+        self.assertIn("OOMKilled: 1", report)
+        self.assertIn("Avg: 45.0", report)
+        self.assertIn("Time-to-Start", report)
+        self.assertIn("Avg: 7.5", report)
 
 if __name__ == "__main__":
     unittest.main()
