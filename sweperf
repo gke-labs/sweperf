@@ -129,14 +129,6 @@ case "$COMMAND" in
         GENERATED_YAML_FILE="$(pwd)/generated_images.yaml"
         python3 "$(dirname "$0")/generate-images/generate.py" --build --push --image-prefix "$IMAGE_PREFIX" --output-list "$GENERATED_IMAGES_FILE" --output-yaml "$GENERATED_YAML_FILE" --limit "$LIMIT" --run "$RUN_NAME"
 
-        echo "=== 2. Pre-pulling SWE-bench Images to Target Nodes ==="
-        chmod +x "$(dirname "$0")/generate-images/prepull_images.py"
-        if [ -f "$GENERATED_IMAGES_FILE" ]; then
-            "$(dirname "$0")/generate-images/prepull_images.py" --image-file "$GENERATED_IMAGES_FILE"
-        else
-            echo "Warning: $GENERATED_IMAGES_FILE not found, skipping prepull."
-        fi
-        
         echo "=== Done! Images generated and pushed. ==="
         ;;
 
