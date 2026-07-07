@@ -2,13 +2,13 @@
 set -e
 
 if [ "$#" -ne 4 ]; then
-    echo "Usage: $0 <pod_template.yaml> <concurrency> <total_pods> <images_file>"
+    echo "Usage: $0 <pod_template.yaml> <concurrency> <duration_seconds> <images_file>"
     exit 1
 fi
 
 TEMPLATE=$1
 CONCURRENCY=$2
-TOTAL=$3
+DURATION=$3
 IMAGES_FILE=$4
 
 if [ ! -f "$TEMPLATE" ]; then
@@ -31,52 +31,54 @@ fi
 
 echo "=== SWE-bench Custom Submitter ==="
 echo "Concurrency: $CONCURRENCY"
-echo "Total Pods: $TOTAL"
+echo "Duration: $DURATION seconds"
 echo "Unique Images: $NUM_IMAGES"
 echo "----------------------------------"
 
-run_pod() {
-    local idx=$1
-    local rand_idx=$(( RANDOM % NUM_IMAGES ))
-    local image="${IMAGES[$rand_idx]}"
-    local pod_name="swebench-run-${idx}-$RANDOM"
-
-    echo "[Pod $pod_name] Submitting with image: $image"
-
-    # Replace placeholders and apply to cluster
-    sed -e "s|{{IMAGE}}|$image|g" -e "s|{{NAME}}|$pod_name|g" "$TEMPLATE" | kubectl apply -f - > /dev/null
-
-    # Wait for the pod to finish (Succeeded or Failed)
-    while true; do
-        # We redirect stderr to null to avoid noisy error logs if the pod doesn't exist yet
-        phase=$(kubectl get pod "$pod_name" -o jsonpath='{.status.phase}' 2>/dev/null || echo "Unknown")
-        
-        if [[ "$phase" == "Succeeded" ]]; then
-            echo "[Pod $pod_name] Finished successfully."
-            break
-        elif [[ "$phase" == "Failed" ]]; then
-            echo "[Pod $pod_name] Failed."
-            break
-        fi
-        sleep 5
-    done
-    
-    # We can delete it afterwards to keep the cluster clean, but we'll leave it 
-    # for debugging purposes for now.
-    # kubectl delete pod "$pod_name" > /dev/null 2>&1
-}
-
 # Main event loop
-for (( i=1; i<=TOTAL; i++ )); do
-    # If we have reached our concurrency limit, wait for any background job to finish
-    while [[ $(jobs -r -p | wc -l) -ge $CONCURRENCY ]]; do
-        wait -n
-    done
+START_TIME=$(date +%s)
+END_TIME=$(( START_TIME + DURATION ))
+idx=1
 
-    # Launch the next pod in the background
-    run_pod "$i" &
+# We rely on a consistent prefix to find our active pods
+POD_PREFIX="swebench-run-"
+
+while [ $(date +%s) -lt $END_TIME ]; do
+    # Count active pods using label selector
+    active_pods=$(kubectl get pods -l app=swebench --field-selector=status.phase!=Succeeded,status.phase!=Failed --no-headers 2>/dev/null | wc -l || echo 0)
+
+    if [ "$active_pods" -lt "$CONCURRENCY" ]; then
+        to_launch=$(( CONCURRENCY - active_pods ))
+        echo "Active pods: $active_pods. Launching $to_launch new pods..."
+        
+        for (( i=0; i<to_launch; i++ )); do
+            # Check time again before launching
+            if [ $(date +%s) -ge $END_TIME ]; then
+                break 2
+            fi
+            
+            rand_idx=$(( RANDOM % NUM_IMAGES ))
+            image="${IMAGES[$rand_idx]}"
+            pod_name="${POD_PREFIX}${idx}-$RANDOM"
+            
+            echo "[Pod $pod_name] Submitting with image: $image"
+            
+            # Apply to cluster with a small retry just in case
+            for attempt in {1..3}; do
+                if sed -e "s|{{IMAGE}}|$image|g" -e "s|{{NAME}}|$pod_name|g" "$TEMPLATE" | kubectl apply -f - > /dev/null 2>&1; then
+                    break
+                fi
+                sleep 2
+            done
+            
+            idx=$((idx + 1))
+        done
+    fi
+    
+    # Sleep gently before checking the cluster state again
+    sleep 10
 done
 
-echo "All tasks submitted. Waiting for remaining pods to finish..."
-wait
-echo "=== All pods completed! ==="
+echo "Time is up! Let's just wait a bit to let Kubernetes settle..."
+sleep 10
+echo "=== Submitter completed! ==="

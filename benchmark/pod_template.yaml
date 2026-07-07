@@ -2,6 +2,8 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: {{NAME}}
+  labels:
+    app: swebench
 spec:
   restartPolicy: Never
   containers:
@@ -9,9 +11,9 @@ spec:
     image: {{IMAGE}}
     env:
     - name: LLM_LATENCY_MU
-      value: "2.0414"
+      value: "-5"
     - name: LLM_LATENCY_SIGMA
-      value: "0.8674"
+      value: "0.1"
     volumeMounts:
     - name: replay-script-vol
       mountPath: /replay.py

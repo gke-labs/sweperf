@@ -20,7 +20,8 @@ gcloud container clusters create "$CLUSTER_NAME" \
     --machine-type="c4-standard-16" \
     --disk-size="500GB" \
     --disk-type="hyperdisk-balanced" \
-    --num-nodes=2 \
+    --num-nodes=3 \
+    --default-max-pods-per-node=256 \
     --scopes="gke-default,storage-rw" || echo "Cluster may already exist."
 gcloud container clusters get-credentials "$CLUSTER_NAME" --zone="${REGION}-b" --project="$PROJECT_ID"
 
@@ -33,8 +34,6 @@ for i in {1..10}; do
     echo "Waiting for cluster... ($i/10)"
     sleep 15
 done
-
-
 
 echo "=== 3. Creating Artifact Registry Repo ==="
 gcloud artifacts repositories create "$REPO_NAME" \
