@@ -1,6 +1,0 @@
-git.mirror(
-    name = "github_to_gog",
-    origin = "git@github.com:gke-demos/sweperf.git",
-    destination = "rpc://user/bsalmon/sweperf",
-    refspecs = ["refs/heads/*:refs/heads/*"],
-)
