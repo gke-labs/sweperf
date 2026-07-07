@@ -14,24 +14,28 @@ SWE-perf is a Kubernetes-based load testing and benchmarking framework designed 
 
 ### 1. Environment Setup
 
-The `setup.sh` script automates the entire provisioning process: it creates the GKE cluster, provisions the Artifact Registry, generates the SWE-bench docker images, pushes them, deploys the agent-sandbox controller, and prepulls the images onto the nodes to prevent cold-start skew during the benchmark.
+The `sweperf` script automates the entire provisioning process across two subcommands.
 
+First, create the GKE cluster and install the agent-sandbox:
 ```bash
-./setup.sh <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME> [IMAGE_LIMIT]
+./sweperf create-cluster <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME>
+```
 
-# Example:
-# ./setup.sh my-gcp-project us-central1 my-cluster swe-perf-repo 10
+Next, generate the SWE-bench docker images, push them to the registry, and prepull them onto the nodes to prevent cold-start skew:
+```bash
+./sweperf generate-images <PROJECT_ID> <REGION> <REPO_NAME> [IMAGE_LIMIT]
 ```
 
 ### 2. Running a Benchmark
 
-The easiest way to execute a test is via the wrapper script, which automatically spins up the submitter alongside the metrics collector.
+The easiest way to execute a test is via the `run-benchmark` subcommand, which automatically spins up the submitter alongside the metrics collector.
 
 ```bash
-./run_benchmark_with_metrics.sh
-```
+./sweperf run-benchmark <DURATION_SECONDS> <CONCURRENCY>
 
-*Note: You can easily adjust the `DURATION` (seconds) and `CONCURRENCY` (target active pods) variables at the top of the `run_benchmark_with_metrics.sh` script.*
+# Example (20 minutes with 512 active pods):
+# ./sweperf run-benchmark 1200 512
+```
 
 ### 3. Modifying Agent Latency (Extreme Churn Testing)
 
