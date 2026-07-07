@@ -30,58 +30,63 @@ def extract_commands(traj_data):
     """
     commands = []
     
-    # Format 1: standard SWE-agent (info -> history)
-    if "info" in traj_data and "history" in traj_data["info"]:
-        for step in traj_data["info"]["history"]:
-            if "action" in step and isinstance(step["action"], str):
-                cmd = step["action"].strip()
-                if cmd:
-                    commands.append(cmd)
-            elif "action_dict" in step:
-                action_dict = step["action_dict"]
-                if action_dict and "command" in action_dict:
-                    cmd = action_dict["command"].strip()
-                    if cmd:
-                        commands.append(cmd)
-                        
-    # Format 2: messages array (e.g. gemini-3-pro-preview / mini-swe-agent-1)
-    if "messages" in traj_data:
-        import re
-        for msg in traj_data["messages"]:
-            if msg.get("role") == "assistant" and "content" in msg and msg["content"]:
-                blocks = re.findall(r'```bash\n(.*?)\n```', msg["content"], re.DOTALL)
-                for block in blocks:
-                    cmd = block.strip()
-                    if cmd:
-                        commands.append(cmd)
-
-    # Format 3: OpenHands style trajectory
-    traj_list = traj_data.get("trajectory", traj_data.get("history", []))
-    if traj_list:
-        for item in traj_list:
-            if "action" in item and item["action"] in ["run", "run_command", "execute"]:
-                args = item.get("args", {})
-                if isinstance(args, dict) and "command" in args:
-                    commands.append(args["command"])
-                elif isinstance(args, str):
-                    commands.append(args)
-            if "tool_calls" in item:
-                for tc in item["tool_calls"]:
-                    if tc.get("function", {}).get("name") in ["execute_bash", "run_bash"]:
-                        args = tc["function"].get("arguments", "{}")
-                        try:
-                            parsed_args = json.loads(args)
-                            if "command" in parsed_args:
-                                commands.append(parsed_args["command"])
-                        except:
-                            pass
-            if "command" in item and isinstance(item["command"], str):
-                commands.append(item["command"])
-                
     # Format 4: simple string list
     if isinstance(traj_data, list) and all(isinstance(x, str) for x in traj_data):
-        commands = traj_data
-        
+        return traj_data
+
+    if isinstance(traj_data, dict):
+        # Format 1: standard SWE-agent (info -> history)
+        if "info" in traj_data and "history" in traj_data["info"]:
+            for step in traj_data["info"]["history"]:
+                if "action" in step and isinstance(step["action"], str):
+                    cmd = step["action"].strip()
+                    if cmd:
+                        commands.append(cmd)
+                elif "action_dict" in step:
+                    action_dict = step["action_dict"]
+                    if action_dict and "command" in action_dict:
+                        cmd = action_dict["command"].strip()
+                        if cmd:
+                            commands.append(cmd)
+                            
+        # Format 2: messages array (e.g. gemini-3-pro-preview / mini-swe-agent-1)
+        if "messages" in traj_data:
+            import re
+            for msg in traj_data["messages"]:
+                if msg.get("role") == "assistant" and "content" in msg and msg["content"]:
+                    blocks = re.findall(r'```bash\n(.*?)\n```', msg["content"], re.DOTALL)
+                    for block in blocks:
+                        cmd = block.strip()
+                        if cmd:
+                            commands.append(cmd)
+
+        # Format 3a: OpenHands style trajectory
+        traj_list = traj_data.get("trajectory", traj_data.get("history", []))
+    else:
+        traj_list = traj_data if isinstance(traj_data, list) else []
+
+    if traj_list:
+        for item in traj_list:
+            if isinstance(item, dict):
+                if "action" in item and item["action"] in ["run", "run_command", "execute"]:
+                    args = item.get("args", {})
+                    if isinstance(args, dict) and "command" in args:
+                        commands.append(args["command"])
+                    elif isinstance(args, str):
+                        commands.append(args)
+                if "tool_calls" in item:
+                    for tc in item["tool_calls"]:
+                        if tc.get("function", {}).get("name") in ["execute_bash", "run_bash"]:
+                            args = tc["function"].get("arguments", "{}")
+                            try:
+                                parsed_args = json.loads(args)
+                                if "command" in parsed_args:
+                                    commands.append(parsed_args["command"])
+                            except:
+                                pass
+                if "command" in item and isinstance(item["command"], str):
+                    commands.append(item["command"])
+                    
     return commands
 
 def process_instance(instance_id, url_or_path, build=False, push=False, image_prefix=""):

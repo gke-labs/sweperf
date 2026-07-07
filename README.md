@@ -15,6 +15,9 @@ These standalone containers can be deployed in any environment to simulate reali
 
 ### Usage: Generating Images
 
+**Trajectory Source**  
+The image generator automatically downloads agent trajectories from the official [SWE-bench/experiments](https://github.com/swe-bench/experiments) repository. This repository hosts public traces of various LLMs and agents (like SWE-agent or OpenHands) attempting to solve SWE-bench issues. SWE-perf extracts the raw bash commands from these JSON traces and bakes them directly into the generated Docker images.
+
 To generate the SWE-bench docker images, push them to a registry, and optionally pre-pull them onto nodes:
 
 ```bash
