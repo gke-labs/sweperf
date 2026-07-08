@@ -44,7 +44,7 @@ spec:
   containers:
   - name: agent
     # Replace with your project, repo, and the desired SWE-bench task ID
-    image: us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>/swe-perf-django__django-10554:latest
+    image: us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>/sweperf:django__django-10554
   restartPolicy: Never
 ```
 
