@@ -151,7 +151,15 @@ Create a GKE cluster with a high-density footprint (`--default-max-pods-per-node
 ./sweperf create-cluster <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME>
 ```
 
-### 2. Running a Benchmark
+### 2. Pre-pull Test Images
+
+To avoid network throttling and excessive disk I/O when spinning up hundreds of pods simultaneously, cache the test images onto your nodes beforehand:
+
+```bash
+./sweperf prepull-images
+```
+
+### 3. Running a Benchmark
 
 The `run-benchmark` subcommand spins up a stateless submitter alongside a metrics collector. The submitter queries the Kubernetes API and maintains a strict concurrent pod limit over a user-defined time window, automatically backfilling pods as they complete.
 
