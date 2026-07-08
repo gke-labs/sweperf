@@ -37,7 +37,7 @@ case "$COMMAND" in
         gcloud container clusters create "$CLUSTER_NAME" \
             --project="$PROJECT_ID" \
             --zone="${REGION}-b" \
-            --machine-type="c4-standard-16" \
+            --machine-type="c4-highmem-16" \
             --disk-size="500GB" \
             --disk-type="hyperdisk-balanced" \
             --num-nodes=3 \
