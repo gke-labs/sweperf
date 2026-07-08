@@ -274,7 +274,7 @@ def main():
     successful_tags = []
     
     if args.image_prefix:
-        args.image_prefix = args.image_prefix.rstrip('/') + f"/{args.run}/"
+        args.image_prefix = args.image_prefix.rstrip('/') + "/sweperf"
 
     print(f"Starting parallel processing with {args.workers} workers...")
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
