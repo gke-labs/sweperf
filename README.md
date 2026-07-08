@@ -1,15 +1,15 @@
 # SWE-perf
 
-SWE-perf provides a suite of standalone, pre-built Docker containers that perfectly emulate the behavior of autonomous coding agents (like SWE-agent or OpenHands). This suite allows teams to evaluate infrastructure performance under the heavy, bursty load of AI agents, without actually needing to run an expensive LLM in the loop.
+SWE-perf provides a suite of standalone, pre-built Docker containers that emulate the behavior of autonomous coding agents (like SWE-agent or OpenHands). This suite allows teams to evaluate infrastructure performance under the heavy, bursty load of AI agents, without actually needing to run an expensive LLM in the loop.
 
 ## The Image Suite
 
-The core value of SWE-perf is the image suite itself. Each image perfectly replicates an autonomous agent interacting with a codebase during a specific SWE-bench task.
+The core value of SWE-perf is the image suite itself. Each image replicates an autonomous agent interacting with a codebase during a specific SWE-bench task.
 
 Instead of hitting an OpenAI or Gemini API, the containers use an embedded **Log-Normal Replay Engine**. This engine:
 1. Takes a pre-recorded agent trajectory (commands run during a SWE-bench task).
 2. Simulates character-by-character shell typing using `pexpect` against a bash session.
-3. Synthesizes highly realistic LLM latency (think time) between commands using a log-normal distribution derived from real-world agent trajectories (averaging ~15.6s).
+3. Synthesizes realistic LLM latency (think time) between commands using a log-normal distribution derived from real-world agent trajectories (averaging ~15.6s).
 
 These standalone containers can be deployed in any environment to simulate realistic AI agent workloads natively.
 
@@ -19,7 +19,7 @@ These standalone containers can be deployed in any environment to simulate reali
 
 If you want to use the pre-built, production-ready SWE-perf image suite within your own Google Cloud projects, **you do not need to generate them yourself.** Instead, synchronize a copy of the official repository directly into your own Artifact Registry. 
 
-The most efficient way to achieve this is via a purely server-to-server copy using `gcrane` (a Google-maintained CLI for container registries). This bypasses downloading hundreds of gigabytes locally and takes only seconds to copy all 500+ images natively.
+The most efficient way to achieve this is via a server-to-server copy using `gcrane` (a Google-maintained CLI for container registries). This bypasses downloading hundreds of gigabytes locally and takes only seconds to copy all 500+ images natively.
 
 ```bash
 # 1. Authenticate to Google Cloud
@@ -33,6 +33,21 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 
 By explicitly copying the images into your own project, your GKE clusters and VMs gain native, frictionless access without having to navigate cross-project IAM restrictions or service account key sharing.
 
+Here is an example Pod spec using one of the newly copied images:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sweperf-agent-test
+spec:
+  containers:
+  - name: agent
+    # Replace with your project, repo, and the desired SWE-bench task ID
+    image: us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>/swe-perf-django__django-10554:latest
+  restartPolicy: Never
+```
+
 ---
 
 ## Image Properties & Usage
@@ -41,7 +56,7 @@ Once you have access to the images, you can deploy them directly. There are seve
 
 ### Modifying Agent Latency (Extreme Churn Testing)
 
-If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, or if you want to test different latency profiles, you can override the distribution parameters. The timing is completely parameterizable via environment variables when running the container (these are the defaults):
+If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, or if you want to test different latency profiles, you can override the distribution parameters. The timing is parameterizable via environment variables when running the container (these are the defaults):
 
 ```yaml
 env:
