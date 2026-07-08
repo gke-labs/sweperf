@@ -145,7 +145,7 @@ While the generated images can be used anywhere, SWE-perf also includes scripts 
 
 ### 1. Environment Setup
 
-Create a GKE cluster with a high-density footprint (`--default-max-pods-per-node=256`) and install the [agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox) to safely execute untrusted actions inside isolated pods:
+Create a GKE cluster with a high-density footprint (`--default-max-pods-per-node=256`). This command will also automatically provision an Artifact Registry repository and synchronize the SWE-perf image suite into it:
 
 ```bash
 ./sweperf create-cluster <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME>

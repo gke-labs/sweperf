@@ -42,6 +42,7 @@ case "$COMMAND" in
             --disk-type="hyperdisk-balanced" \
             --num-nodes=3 \
             --default-max-pods-per-node=256 \
+            --enable-ip-alias \
             --scopes="gke-default,storage-rw" || echo "Cluster may already exist."
         gcloud container clusters get-credentials "$CLUSTER_NAME" --zone="${REGION}-b" --project="$PROJECT_ID"
 
@@ -71,21 +72,9 @@ case "$COMMAND" in
             --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
             --role="roles/artifactregistry.reader"
 
-        echo "=== 4. Installing Agent Sandbox ==="
-        AGENT_SANDBOX_DIR=$(mktemp -d)
-        echo "Cloning fresh agent-sandbox repository to $AGENT_SANDBOX_DIR..."
-        git clone https://github.com/kubernetes-sigs/agent-sandbox.git "$AGENT_SANDBOX_DIR"
-
-        cd "$AGENT_SANDBOX_DIR"
-        IMAGE_PREFIX="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME/"
-        echo "Building Agent Sandbox controller and pushing to $IMAGE_PREFIX"
-        ./dev/tools/push-images --image-prefix="$IMAGE_PREFIX" --controller-only
-
-        echo "Deploying to Kubernetes cluster"
-        ./dev/tools/deploy-to-kube --image-prefix="$IMAGE_PREFIX" --extensions
-
-        cd - > /dev/null
-        rm -rf "$AGENT_SANDBOX_DIR"
+        echo "=== 4. Copying Images to New Repository ==="
+        IMAGE_DEST="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME"
+        "$0" copy-images "$IMAGE_DEST"
 
         echo "=== Done! Cluster Setup Complete. ==="
         echo "Cluster: $CLUSTER_NAME"
