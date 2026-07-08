@@ -1,17 +1,17 @@
 # SWE-perf
 
-SWE-perf generates Docker containers that run SWE-bench derived workloads to emulate the behavior of autonomous coding agents (like SWE-agent). It also provides an optional Kubernetes-based benchmarking framework to evaluate infrastructure performance under the heavy, bursty load of these agents.
+SWE-perf provides a suite of standalone, pre-built Docker containers that perfectly emulate the behavior of autonomous coding agents (like SWE-agent or OpenHands). This suite allows teams to evaluate infrastructure performance under the heavy, bursty load of AI agents, without actually needing to run an expensive LLM in the loop.
 
-## Core Feature: Workload Image Generation
+## The Image Suite
 
-The most critical component of SWE-perf is the image generation engine. It creates standalone Docker images that perfectly replicate an autonomous agent interacting with a codebase. 
+The core value of SWE-perf is the image suite itself. Each image perfectly replicates an autonomous agent interacting with a codebase during a specific SWE-bench task.
 
-Instead of running an expensive LLM in the loop, the generated containers use a **Log-Normal Replay Engine** (`benchmark/replay.py`). This engine:
+Instead of hitting an OpenAI or Gemini API, the containers use an embedded **Log-Normal Replay Engine**. This engine:
 1. Takes a pre-recorded agent trajectory (commands run during a SWE-bench task).
 2. Simulates character-by-character shell typing using `pexpect` against a bash session.
 3. Synthesizes highly realistic LLM latency (think time) between commands using a log-normal distribution derived from real-world agent trajectories (averaging ~15.6s).
 
-These standalone containers can be deployed in any environment to simulate realistic AI agent workloads without requiring an actual LLM backend or API keys.
+These standalone containers can be deployed in any environment to simulate realistic AI agent workloads natively.
 
 ---
 
