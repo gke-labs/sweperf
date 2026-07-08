@@ -28,7 +28,6 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 
 # 2. Trigger the server-to-server copy into your destination Artifact Registry
 ./sweperf copy-images \
-  us-central1-docker.pkg.dev/bsalmon-gke-dev/sweperf \
   us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>
 ```
 
