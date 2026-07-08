@@ -30,9 +30,9 @@ sudo python3 generate.py --build
 ### Flags
 
 - `--local-trajs-dir`: Path to the local directory containing the downloaded `.traj.json` files (can contain nested subdirectories, as the script crawls it recursively). If omitted, the script downloads them automatically.
-- `--build`: If specified, the script will automatically invoke `docker build` to create the final `swe-agent-replay:{instance_id}` image.
+  - `--build`: If specified, the script will automatically invoke `docker build` to create the final `sweperf:{instance_id}` image.
 - `--push`: Automatically pushes the built images to a remote registry (requires `--build`).
-- `--image-prefix`: Prefix for the docker image tag. For example, if you set `--image-prefix my-registry/my-repo/`, the image will be tagged as `my-registry/my-repo/swe-agent-replay:{instance_id}`.
+- `--image-prefix`: Prefix for the docker image tag. For example, if you set `--image-prefix my-registry/my-repo/`, the image will be tagged as `my-registry/my-repo/<run_name>:{instance_id}`.
 - `--limit <N>`: Limit the number of trajectories processed (useful for testing, e.g., `--limit 1`).
 - `--test`: Generates a dummy `test.Dockerfile` based on `ubuntu:22.04` and replays a mock `test_trace.json` instead of pulling large SWE-bench images.
 
@@ -41,15 +41,15 @@ sudo python3 generate.py --build
 Once an image is built, you can run it interactively to watch the agent's trajectory replay in the terminal:
 
 ```bash
-sudo docker run -it --rm swe-agent-replay:<instance_id>
+sudo docker run -it --rm sweperf:<instance_id>
 ```
-*(Example: `sudo docker run -it --rm swe-agent-replay:pydata__xarray-4356`)*
+*(Example: `sudo docker run -it --rm sweperf:pydata__xarray-4356`)*
 
 ### Wait for Claim Mode
 
 To simulate use in a warm pool (e.g., Kubernetes Agent Sandbox), you can start the container in a paused state until it receives a claim signal. By setting the `WAIT_FOR_CLAIM_FILE` environment variable to a file path, the script will loop indefinitely until that file exists and contains `agents.x-k8s.io/sandbox-id`.
 
 ```bash
-sudo docker run -it --rm -e WAIT_FOR_CLAIM_FILE=/tmp/claim.txt swe-agent-replay:<instance_id>
+sudo docker run -it --rm -e WAIT_FOR_CLAIM_FILE=/tmp/claim.txt sweperf:<instance_id>
 ```
 *(The execution will pause until you inject the signal: `echo "agents.x-k8s.io/sandbox-id" > /tmp/claim.txt` into the container)*

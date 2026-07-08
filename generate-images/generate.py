@@ -137,7 +137,7 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
     
     # 4. Build image (optional)
     if build:
-        tag_name = f"{image_prefix}swe-agent-replay:{instance_id}"
+        tag_name = f"{image_prefix.rstrip('/')}:{instance_id}" if image_prefix else f"sweperf:{instance_id}"
         print(f"Building Docker image {tag_name}...")
         cmd = ["docker", "build", "-t", tag_name, "-f", dockerfile_name, "."]
         try:
@@ -205,11 +205,11 @@ def main():
         print(f"Generated {dockerfile_name}")
         
         if args.build:
-            image_tag = "swe-agent-replay:test"
+            image_tag = f"{args.image_prefix.rstrip('/')}:test" if args.image_prefix else "sweperf:test"
             print(f"Building Docker image {image_tag}...")
             subprocess.run(["docker", "build", "-t", image_tag, "-f", dockerfile_name, "."], check=True)
             print(f"Successfully built {image_tag}")
-            print("\nTo test it, run: docker run -it --rm swe-agent-replay:test")
+            print(f"\nTo test it, run: docker run -it --rm {image_tag}")
         sys.exit(0)
 
     traj_files = []
@@ -273,6 +273,9 @@ def main():
     success_count = 0
     successful_tags = []
     
+    if args.image_prefix:
+        args.image_prefix = args.image_prefix.rstrip('/') + f"/{args.run}/"
+
     print(f"Starting parallel processing with {args.workers} workers...")
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
         future_to_instance = {
@@ -285,7 +288,7 @@ def main():
             try:
                 if future.result():
                     success_count += 1
-                    successful_tags.append(f"{args.image_prefix}swe-agent-replay:{instance_id}")
+                    successful_tags.append(f"{args.image_prefix.rstrip('/')}:{instance_id}" if args.image_prefix else f"sweperf:{instance_id}")
             except Exception as e:
                 print(f"Error processing {instance_id}: {e}")
             
