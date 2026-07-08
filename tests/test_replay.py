@@ -171,5 +171,57 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
                 subprocess.run(["docker", "rm", "-f", container_id], capture_output=True)
                 subprocess.run(["docker", "rmi", image_name], capture_output=True)
 
+    def test_replay_git_diff_no_pager(self):
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        replay_script_src = os.path.join(repo_root, 'benchmark', 'replay.py')
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            trace = [
+                "git config --global user.email 'test@test.com'",
+                "git config --global user.name 'Test'",
+                "git init",
+                "for i in $(seq 1 100); do echo $i >> large_file.txt; done",
+                "git add large_file.txt",
+                "git commit -m 'init'",
+                "echo 'new line' >> large_file.txt",
+                "git diff",
+                "echo 'SUCCESS_AFTER_DIFF'"
+            ]
+            trace_path = os.path.join(temp_dir, "trace.json")
+            with open(trace_path, "w") as f:
+                json.dump(trace, f)
+                
+            replay_script_dest = os.path.join(temp_dir, "replay.py")
+            shutil.copy(replay_script_src, replay_script_dest)
+            
+            dockerfile_content = """
+FROM python:3.9-slim
+RUN apt-get update && apt-get install -y git
+RUN pip install pexpect
+COPY replay.py /replay.py
+COPY trace.json /trace.json
+ENV LLM_LATENCY_MU=-5
+ENV LLM_LATENCY_SIGMA=0.1
+ENV GIT_PAGER=cat
+ENV PAGER=cat
+ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
+"""
+            dockerfile_path = os.path.join(temp_dir, "Dockerfile")
+            with open(dockerfile_path, "w") as f:
+                f.write(dockerfile_content)
+                
+            image_name = "test-replay-git-diff:latest"
+            subprocess.run(["docker", "build", "-t", image_name, "."], cwd=temp_dir, capture_output=True, check=True)
+            
+            run_cmd = ["docker", "run", "--rm", image_name]
+            # Use timeout just in case it hangs!
+            run_result = subprocess.run(run_cmd, capture_output=True, text=True, timeout=60)
+            
+            output = run_result.stdout
+            
+            self.assertIn("SUCCESS_AFTER_DIFF", output, "Failed to complete diff! The pager likely hung the process.")
+            
+            subprocess.run(["docker", "rmi", image_name], capture_output=True)
+
 if __name__ == '__main__':
     unittest.main()

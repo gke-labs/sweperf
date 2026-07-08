@@ -9,3 +9,8 @@ spec:
   containers:
   - name: swebench
     image: {{IMAGE}}
+    env:
+    - name: PAGER
+      value: "cat"
+    - name: GIT_PAGER
+      value: "cat"

@@ -70,7 +70,10 @@ def main():
         
     print(f"Loaded {len(commands)} commands to replay.")
     
-    child = pexpect.spawn('bash --norc --noprofile', encoding='utf-8', timeout=None)
+    env = os.environ.copy()
+    env['PAGER'] = 'cat'
+    env['GIT_PAGER'] = 'cat'
+    child = pexpect.spawn('bash --norc --noprofile', encoding='utf-8', timeout=None, env=env)
     
     # Disable terminal echo so we don't see the command twice
     child.sendline('stty -echo')
