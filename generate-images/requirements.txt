@@ -3,3 +3,5 @@ boto3
 requests
 urllib3
 tqdm
+pydantic
+kubernetes

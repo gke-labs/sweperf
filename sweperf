@@ -8,6 +8,7 @@ usage() {
     echo "  create-cluster <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME>   Creates GKE cluster and installs sandbox"
     echo "  generate-images --project <PROJECT> --region <REGION> --repo <REPO> [--limit LIMIT] [--run RUN_NAME]"
     echo "                                                                    Generates, pushes, and prepulls SWE-bench images"
+    echo "  prepull-images                                                    Prepulls SWE-bench images from generated_images.txt"
     echo "  run-benchmark <DURATION_SECONDS> <CONCURRENCY>                    Runs the benchmark and collects metrics"
     echo ""
     exit 1
@@ -130,6 +131,23 @@ case "$COMMAND" in
         python3 "$(dirname "$0")/generate-images/generate.py" --build --push --image-prefix "$IMAGE_PREFIX" --output-list "$GENERATED_IMAGES_FILE" --output-yaml "$GENERATED_YAML_FILE" --limit "$LIMIT" --run "$RUN_NAME"
 
         echo "=== Done! Images generated and pushed. ==="
+        ;;
+
+    prepull-images)
+        echo "=== Pre-pulling Test Images ==="
+        GENERATED_IMAGES_FILE="$(pwd)/generated_images.txt"
+        
+        VENV_DIR="$(dirname "$0")/.venv"
+        if [ ! -d "$VENV_DIR" ]; then
+            echo "Creating virtual environment at $VENV_DIR..."
+            python3 -m venv "$VENV_DIR"
+        fi
+        source "$VENV_DIR/bin/activate"
+        
+        pip install -i https://pypi.org/simple -r "$(dirname "$0")/generate-images/requirements.txt"
+        pip install -i https://pypi.org/simple -e "$(dirname "$0")/../agent-sandbox/clients/python/agentic-sandbox-client" -e "$(dirname "$0")/../agent-sandbox/examples/agent-sandbox-rl"
+        python3 "$(dirname "$0")/generate-images/prepull_images.py" --image-file "$GENERATED_IMAGES_FILE"
+        echo "=== Done! Images pre-pulled. ==="
         ;;
 
     run-benchmark)
