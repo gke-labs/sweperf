@@ -31,6 +31,31 @@ def main():
                     pass
             time.sleep(1)
 
+    if os.environ.get("WAIT_FOR_START_PORT"):
+        import socket
+        port = int(os.environ.get("WAIT_FOR_START_PORT"))
+        print(f"Waiting for 'start' command on port {port}...")
+        sys.stdout.flush()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind(('', port))
+            s.listen()
+            while True:
+                try:
+                    conn, addr = s.accept()
+                    with conn:
+                        data = conn.recv(1024)
+                        text = data.decode('utf-8', errors='ignore').lower()
+                        if 'start' in text:
+                            conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nOK\n")
+                            break
+                        else:
+                            conn.sendall(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+                except Exception as e:
+                    pass
+        print("Start signal received via port!")
+        sys.stdout.flush()
+
     if len(sys.argv) != 2:
         print("Usage: python3 replay.py <trace.json>")
         sys.exit(1)

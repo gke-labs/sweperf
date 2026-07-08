@@ -84,6 +84,25 @@ volumes:
 
 ---
 
+### Wait for Start Port (Network Blocking)
+
+If you are not using Agent Sandbox but still want to deploy pods in a "warm" paused state until explicitly triggered, you can use the `WAIT_FOR_START_PORT` mode. This is useful for load testing where you want to spin up 500 pods and have them all start running the agent trajectory simultaneously via a broadcast signal.
+
+Setting the `WAIT_FOR_START_PORT` environment variable to a port number will cause the container to stand up a simple TCP server and pause execution until it receives the string `start` (or an HTTP GET request to `/start`) on that port.
+
+Example for a pod spec:
+```yaml
+env:
+- name: WAIT_FOR_START_PORT
+  value: "8080"
+```
+To trigger the replay engine once the pod is running:
+```bash
+curl -X GET http://<pod-ip>:8080/start
+```
+
+---
+
 ## Building / Regenerating Images (Advanced)
 
 If you have made edits to the replay engine or script injector, you will need to re-generate the image suite from scratch.
