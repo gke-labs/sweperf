@@ -173,8 +173,8 @@ case "$COMMAND" in
         DURATION=$1
         CONCURRENCY=$2
 
-        echo "Starting metrics collection in background..."
-        rm -f node_metrics.txt
+        rm -f node_metrics.txt pods.json
+        echo "Starting node metrics watcher..."
         (
           END_TIME=$((SECONDS + DURATION))
           while [ $SECONDS -lt $END_TIME ]; do
@@ -182,17 +182,22 @@ case "$COMMAND" in
             sleep 10
           done
         ) &
-        METRICS_PID=$!
+        NODE_METRICS_PID=$!
+
+        echo "Starting pod GC collector watcher..."
+        python3 benchmark/collector.py $DURATION &
+        COLLECTOR_PID=$!
 
         echo "Starting submitter ($DURATION seconds, $CONCURRENCY pods)..."
         ./benchmark/submitter.sh benchmark/pod_template.yaml $CONCURRENCY $DURATION generated_images.txt
 
-        echo "Submitter finished. Stopping metrics collection..."
-        kill $METRICS_PID 2>/dev/null || true
-        wait $METRICS_PID 2>/dev/null || true
+        echo "Submitter finished. Stopping background watchers..."
+        kill $NODE_METRICS_PID 2>/dev/null || true
+        wait $NODE_METRICS_PID 2>/dev/null || true
+        kill $COLLECTOR_PID 2>/dev/null || true
+        wait $COLLECTOR_PID 2>/dev/null || true
 
         echo "Generating report..."
-        kubectl get pods -l app=swebench -o json > pods.json 2>/dev/null || true
         python3 benchmark/process_metrics.py > report.md
         cat report.md
         ;;
