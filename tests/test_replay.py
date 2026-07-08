@@ -120,5 +120,56 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
                 subprocess.run(["docker", "rm", "-f", container_id], capture_output=True)
                 subprocess.run(["docker", "rmi", image_name], capture_output=True)
 
+    def test_replay_wait_for_start_port(self):
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        replay_script_src = os.path.join(repo_root, 'benchmark', 'replay.py')
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            trace = ["echo 'post_port_execution_123'"]
+            trace_path = os.path.join(temp_dir, "trace.json")
+            with open(trace_path, "w") as f:
+                json.dump(trace, f)
+                
+            replay_script_dest = os.path.join(temp_dir, "replay.py")
+            shutil.copy(replay_script_src, replay_script_dest)
+            
+            dockerfile_content = """
+FROM python:3.9-slim
+RUN apt-get update && apt-get install -y curl
+RUN pip install pexpect
+COPY replay.py /replay.py
+COPY trace.json /trace.json
+ENV LLM_LATENCY_MU=-5
+ENV LLM_LATENCY_SIGMA=0.1
+ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
+"""
+            dockerfile_path = os.path.join(temp_dir, "Dockerfile")
+            with open(dockerfile_path, "w") as f:
+                f.write(dockerfile_content)
+                
+            image_name = "test-replay-port-image:latest"
+            subprocess.run(["docker", "build", "-t", image_name, "."], cwd=temp_dir, capture_output=True, check=True)
+            
+            import time
+            run_cmd = ["docker", "run", "-d", "-e", "WAIT_FOR_START_PORT=8080", image_name]
+            run_result = subprocess.run(run_cmd, capture_output=True, text=True, check=True)
+            container_id = run_result.stdout.strip()
+            
+            try:
+                time.sleep(2)
+                logs_before = subprocess.run(["docker", "logs", container_id], capture_output=True, text=True).stdout
+                self.assertNotIn("post_port_execution_123", logs_before, "Should not execute before curl")
+                self.assertIn("Waiting for 'start' command on port 8080...", logs_before, "Should print waiting message")
+                
+                subprocess.run(["docker", "exec", container_id, "curl", "-X", "GET", "http://localhost:8080/start"], check=True)
+                
+                time.sleep(3)
+                logs_after = subprocess.run(["docker", "logs", container_id], capture_output=True, text=True).stdout
+                self.assertIn("Start signal received via port!", logs_after, "Should print port received message")
+                self.assertIn("post_port_execution_123", logs_after, "Should execute after port start")
+            finally:
+                subprocess.run(["docker", "rm", "-f", container_id], capture_output=True)
+                subprocess.run(["docker", "rmi", image_name], capture_output=True)
+
 if __name__ == '__main__':
     unittest.main()
