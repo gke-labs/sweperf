@@ -13,28 +13,37 @@ Instead of running an expensive LLM in the loop, the generated containers use a 
 
 These standalone containers can be deployed in any environment to simulate realistic AI agent workloads without requiring an actual LLM backend or API keys.
 
-### Usage: Generating Images
+---
 
-**Trajectory Source**  
-The image generator automatically downloads agent trajectories from the official [SWE-bench/experiments](https://github.com/swe-bench/experiments) repository. This repository hosts public traces of various LLMs and agents (like SWE-agent or OpenHands) attempting to solve SWE-bench issues. SWE-perf extracts the raw bash commands from these JSON traces and bakes them directly into the generated Docker images.
+## 🚀 Getting the Images
 
-To generate the SWE-bench docker images, push them to a registry, and optionally pre-pull them onto nodes:
+If you want to use the pre-built, production-ready SWE-perf image suite within your own Google Cloud projects, **you do not need to generate them yourself.** Instead, synchronize a copy of the official repository directly into your own Artifact Registry. 
+
+The most efficient way to achieve this is via a purely server-to-server copy using `gcrane` (a Google-maintained CLI for container registries). This bypasses downloading hundreds of gigabytes locally and takes only seconds to copy all 500+ images natively.
 
 ```bash
-./sweperf generate-images --project <PROJECT_ID> --region <REGION> --repo <REPO_NAME> [--limit <LIMIT>] [--run <RUN_NAME>]
+# 1. Install gcrane if you do not have it
+go install github.com/google/go-containerregistry/cmd/gcrane@latest
+
+# 2. Authenticate to Google Cloud
+gcloud auth login
+gcloud auth configure-docker us-central1-docker.pkg.dev
+
+# 3. Trigger the server-to-server copy into your destination Artifact Registry
+gcrane cp -r \
+  us-central1-docker.pkg.dev/bsalmon-gke-dev/sweperf \
+  us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>
 ```
 
-**Options:**
-* `--project`: Your Google Cloud project ID.
-* `--region`: The Google Cloud region (e.g., `us-central1`).
-* `--repo`: The name of the Artifact Registry repository to push images to.
-* `--limit`: (Optional) The maximum number of images to generate (default: 0 for all).
-* `--run`: (Optional) The SWE-bench experiment run name to pull trajectories from.
+By explicitly copying the images into your own project, your GKE clusters and VMs gain native, frictionless access without having to navigate cross-project IAM restrictions or service account key sharing.
 
-*Note: By default, it uses trajectories from `20251120_livesweagent_gemini-3-pro-preview`. You can specify a different run from the SWE-bench experiments repository using the `--run` flag.*
-*This utilizes the `generate-images/generate.py` script under the hood to build images with the injected replay engine and trajectory traces.*
+---
 
-### Image Properties: Modifying Agent Latency (Extreme Churn Testing)
+## Image Properties & Usage
+
+Once you have access to the images, you can deploy them directly. There are several useful dials baked into the container.
+
+### Modifying Agent Latency (Extreme Churn Testing)
 
 If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, or if you want to test different latency profiles, you can override the distribution parameters. The timing is completely parameterizable via environment variables when running the container (these are the defaults):
 
@@ -50,7 +59,7 @@ env:
 
 To floor out the latency for extreme churn testing (e.g. constant 0.5s delay), you can set `LLM_LATENCY_MU` to a large negative number like `"-5"`, or explicitly set `LLM_LATENCY_MIN` and a negative `LLM_LATENCY_MU`.
 
-### Image Properties: Wait for Claim (Agent Sandbox Integration)
+### Wait for Claim (Agent Sandbox Integration)
 
 To use the generated images seamlessly with [Agent Sandbox's warm pools](https://github.com/kubernetes-sigs/agent-sandbox), the replay engine can be configured to block execution until the Pod is formally claimed and assigned to a user.
 
@@ -72,6 +81,31 @@ volumes:
       fieldRef:
         fieldPath: metadata.labels
 ```
+
+---
+
+## Building / Regenerating Images (Advanced)
+
+If you have made edits to the replay engine or script injector, you will need to re-generate the image suite from scratch.
+
+**Trajectory Source**  
+The image generator automatically downloads agent trajectories from the official [SWE-bench/experiments](https://github.com/swe-bench/experiments) repository. This repository hosts public traces of various LLMs and agents (like SWE-agent or OpenHands) attempting to solve SWE-bench issues. SWE-perf extracts the raw bash commands from these JSON traces and bakes them directly into the generated Docker images.
+
+To generate the SWE-bench docker images, push them to a registry, and optionally pre-pull them onto nodes:
+
+```bash
+./sweperf generate-images --project <PROJECT_ID> --region <REGION> --repo <REPO_NAME> [--limit <LIMIT>] [--run <RUN_NAME>]
+```
+
+**Options:**
+* `--project`: Your Google Cloud project ID.
+* `--region`: The Google Cloud region (e.g., `us-central1`).
+* `--repo`: The name of the Artifact Registry repository to push images to.
+* `--limit`: (Optional) The maximum number of images to generate (default: 0 for all).
+* `--run`: (Optional) The SWE-bench experiment run name to pull trajectories from.
+
+*Note: By default, it uses trajectories from `20251120_livesweagent_gemini-3-pro-preview`. You can specify a different run from the SWE-bench experiments repository using the `--run` flag.*
+*This utilizes the `generate-images/generate.py` script under the hood to build images with the injected replay engine and trajectory traces.*
 
 ---
 
