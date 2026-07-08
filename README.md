@@ -22,15 +22,12 @@ If you want to use the pre-built, production-ready SWE-perf image suite within y
 The most efficient way to achieve this is via a purely server-to-server copy using `gcrane` (a Google-maintained CLI for container registries). This bypasses downloading hundreds of gigabytes locally and takes only seconds to copy all 500+ images natively.
 
 ```bash
-# 1. Install gcrane if you do not have it
-go install github.com/google/go-containerregistry/cmd/gcrane@latest
-
-# 2. Authenticate to Google Cloud
+# 1. Authenticate to Google Cloud
 gcloud auth login
 gcloud auth configure-docker us-central1-docker.pkg.dev
 
-# 3. Trigger the server-to-server copy into your destination Artifact Registry
-gcrane cp -r \
+# 2. Trigger the server-to-server copy into your destination Artifact Registry
+./sweperf copy-images \
   us-central1-docker.pkg.dev/bsalmon-gke-dev/sweperf \
   us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>
 ```

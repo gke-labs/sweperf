@@ -6,6 +6,7 @@ usage() {
     echo ""
     echo "Commands:"
     echo "  create-cluster <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME>   Creates GKE cluster and installs sandbox"
+    echo "  copy-images <SRC_PREFIX> <DEST_PREFIX>                            Copies all images from a registry to another using gcrane"
     echo "  generate-images --project <PROJECT> --region <REGION> --repo <REPO> [--limit LIMIT] [--run RUN_NAME]"
     echo "                                                                    Generates, pushes, and prepulls SWE-bench images"
     echo "  prepull-images                                                    Prepulls SWE-bench images from generated_images.txt"
@@ -88,6 +89,28 @@ case "$COMMAND" in
 
         echo "=== Done! Cluster Setup Complete. ==="
         echo "Cluster: $CLUSTER_NAME"
+        ;;
+
+    copy-images)
+        if [ "$#" -ne 2 ]; then
+            echo "Usage: $0 copy-images <SOURCE_PREFIX> <DEST_PREFIX>"
+            echo "Example: $0 copy-images us-central1-docker.pkg.dev/bsalmon-gke-dev/sweperf us-central1-docker.pkg.dev/my-project/my-repo"
+            exit 1
+        fi
+        SRC="$1"
+        DEST="$2"
+
+        if ! command -v gcrane &> /dev/null; then
+            echo "Installing gcrane..."
+            go install github.com/google/go-containerregistry/cmd/gcrane@latest
+        fi
+
+        # Make sure gcrane is on the PATH if go install just downloaded it
+        export PATH=$PATH:$(go env GOPATH)/bin
+
+        echo "=== Copying images from $SRC to $DEST ==="
+        gcrane cp -r "$SRC" "$DEST"
+        echo "=== Copy complete! ==="
         ;;
 
     generate-images)
