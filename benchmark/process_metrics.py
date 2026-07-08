@@ -89,11 +89,11 @@ def parse_job_metrics(file_path):
                 reason = None
                 for c_status in status.get('containerStatuses', []):
                     term = c_status.get('state', {}).get('terminated', {})
-                    if 'finishedAt' in term:
+                    if term.get('finishedAt'):
                         finished_at_str = term['finishedAt']
                         try:
                             finished_at = datetime.strptime(finished_at_str, "%Y-%m-%dT%H:%M:%SZ")
-                        except ValueError:
+                        except (ValueError, TypeError):
                             pass
                         exit_code = term.get('exitCode')
                         reason = term.get('reason')
