@@ -19,9 +19,18 @@ def main():
             result = subprocess.run(["kubectl", "get", "pods", "-l", "app=swebench", "-o", "json"], capture_output=True, text=True)
             if result.returncode == 0:
                 data = json.loads(result.stdout)
+                running = 0
+                pending = 0
                 for pod in data.get("items", []):
                     pod_uid = pod["metadata"]["uid"]
                     seen_pods[pod_uid] = pod
+                    phase = pod.get("status", {}).get("phase")
+                    if phase == "Running":
+                        running += 1
+                    elif phase == "Pending":
+                        pending += 1
+                with open("concurrency.txt", "a") as f_conc:
+                    f_conc.write(f"{time.time()} {pending} {running}\n")
         except Exception as e:
             pass
             
