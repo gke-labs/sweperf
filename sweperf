@@ -174,14 +174,8 @@ case "$COMMAND" in
         CONCURRENCY=$2
 
         rm -f node_metrics.txt pods.json
-        echo "Starting node metrics watcher..."
-        (
-          END_TIME=$((SECONDS + DURATION))
-          while [ $SECONDS -lt $END_TIME ]; do
-            kubectl top nodes --no-headers >> node_metrics.txt 2>/dev/null || true
-            sleep 10
-          done
-        ) &
+        echo "Starting heavily-aligned node metrics watcher..."
+        python3 benchmark/node_watcher.py $DURATION &
         NODE_METRICS_PID=$!
 
         echo "Starting pod GC collector watcher..."

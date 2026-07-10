@@ -2,15 +2,24 @@ import collections
 import math
 import sys
 import json
+import os
 from datetime import datetime
 
 def parse_metrics(lines):
-    data = collections.defaultdict(lambda: {'cpu': [], 'ram': []})
+    data = collections.defaultdict(lambda: {'cpu': [], 'ram': [], 'per_job_cpu': [], 'per_job_ram': []})
     for line in lines:
         parts = line.strip().split()
-        if len(parts) >= 5:
-            node = parts[0]
-            cpu_str = parts[1]
+        # New Strict Aligned Format: TIMESTAMP NODE CPU RAM PODS
+        if len(parts) == 5:
+            timestamp = parts[0]
+            node = parts[1]
+            cpu_str = parts[2]
+            ram_str = parts[3]
+            try:
+                pods = int(parts[4])
+            except ValueError:
+                continue
+
             if cpu_str.endswith('m'):
                 cpu = int(cpu_str[:-1])
             else:
@@ -19,7 +28,6 @@ def parse_metrics(lines):
                 except:
                     continue
 
-            ram_str = parts[3]
             if ram_str.endswith('Mi'):
                 ram = int(ram_str[:-2])
             elif ram_str.endswith('Gi'):
@@ -32,6 +40,12 @@ def parse_metrics(lines):
 
             data[node]['cpu'].append(cpu)
             data[node]['ram'].append(ram)
+            
+            # Instantly calculate purely aligned slices!
+            if pods > 0:
+                data[node]['per_job_cpu'].append(cpu / pods)
+                data[node]['per_job_ram'].append(ram / pods)
+                
     return data
 
 def percentile(N, percent, key=lambda x:x):
@@ -159,6 +173,23 @@ def process_job_metrics(metrics):
         max_pend = pending_sorted[-1]
         p90_pend = percentile(pending_sorted, 0.90)
         report.append(f"- **Time-to-Start (s):** Avg: {avg_pend:.1f}, Max: {max_pend:.1f}, P90: {p90_pend:.1f}")
+        
+    if os.path.exists('concurrency.txt'):
+        running_pts = []
+        pending_pts = []
+        with open('concurrency.txt', 'r') as cf:
+            for c_line in cf:
+                parts = c_line.strip().split()
+                if len(parts) >= 3:
+                    pending_pts.append(int(parts[1]))
+                    running_pts.append(int(parts[2]))
+        
+        if running_pts:
+            r_avg = sum(running_pts) / len(running_pts)
+            p_avg = sum(pending_pts) / len(pending_pts)
+            report.append("")
+            report.append(f"- **Outstanding Queue (Pending):** Avg: {p_avg:.1f}, Peak: {max(pending_pts)}")
+            report.append(f"- **Active In-Flight (Running):** Avg: {r_avg:.1f}, Peak: {max(running_pts)}")
     
     report.append("")
     return "\n".join(report)
@@ -189,11 +220,12 @@ def process_metrics(data):
 
 if __name__ == "__main__":
     report_parts = []
+    node_data = None
     try:
         with open('node_metrics.txt', 'r') as f:
             lines = f.readlines()
-            data = parse_metrics(lines)
-            report_parts.append(process_metrics(data))
+            node_data = parse_metrics(lines)
+            report_parts.append(process_metrics(node_data))
     except FileNotFoundError:
         print("node_metrics.txt not found.")
         sys.exit(1)
@@ -201,5 +233,30 @@ if __name__ == "__main__":
     metrics = parse_job_metrics('pods.json')
     if metrics['lengths'] or metrics['pending_times']:
         report_parts.append(process_job_metrics(metrics))
+
+    # Add Per-Job Math using Aligned Telemetry
+    if node_data:
+        avg_cpu_per_job = 0
+        avg_ram_per_job = 0
+        total_slices = 0
+        
+        for node, n_metrics in node_data.items():
+            if n_metrics.get('per_job_cpu'):
+                avg_cpu_per_job += sum(n_metrics['per_job_cpu'])
+                avg_ram_per_job += sum(n_metrics['per_job_ram'])
+                total_slices += len(n_metrics['per_job_cpu'])
+                
+        if total_slices > 0:
+            avg_cpu_per_job /= total_slices
+            avg_ram_per_job /= total_slices
+            
+            heuristics_report = [
+                "### Per-Job Footprint (Cost Heuristics)",
+                "",
+                f"- **Avg CPU per job:** {avg_cpu_per_job:.1f} millicores (Calculated via Aligned Point-in-Time Slice Arrays)",
+                f"- **Avg RAM per job:** {avg_ram_per_job:.1f} MiB (Includes native node OS caching)",
+                ""
+            ]
+            report_parts.append("\n".join(heuristics_report))
         
     print("\n".join(report_parts))

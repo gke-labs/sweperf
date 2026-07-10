@@ -51,8 +51,10 @@ while [ $(date +%s) -lt $END_TIME ]; do
         to_launch=$(( CONCURRENCY - active_pods ))
         echo "Active pods: $active_pods. Launching $to_launch new pods..."
         
+        batch_yaml=$(mktemp)
+        count=0
+        
         for (( i=0; i<to_launch; i++ )); do
-            # Check time again before launching
             if [ $(date +%s) -ge $END_TIME ]; then
                 break 2
             fi
@@ -61,18 +63,26 @@ while [ $(date +%s) -lt $END_TIME ]; do
             image="${IMAGES[$rand_idx]}"
             pod_name="${POD_PREFIX}${idx}-$RANDOM"
             
-            echo "[Pod $pod_name] Submitting with image: $image"
+            sed -e "s|{{IMAGE}}|$image|g" -e "s|{{NAME}}|$pod_name|g" "$TEMPLATE" >> "$batch_yaml"
+            echo "---" >> "$batch_yaml"
             
-            # Apply to cluster with a small retry just in case
-            for attempt in {1..3}; do
-                if sed -e "s|{{IMAGE}}|$image|g" -e "s|{{NAME}}|$pod_name|g" "$TEMPLATE" | kubectl apply -f - > /dev/null 2>&1; then
-                    break
-                fi
-                sleep 2
-            done
-            
+            count=$((count + 1))
             idx=$((idx + 1))
+            
+            # Submit in batches of 50 or when the loop is done
+            if [ "$count" -ge 50 ] || [ "$i" -eq $((to_launch - 1)) ]; then
+                echo "Submitting batch of $count pods..."
+                # Run the kubernetes apply command in background natively avoiding network blocks
+                kubectl apply -f "$batch_yaml" > /dev/null 2>&1 &
+                
+                # Re-initialize the next batch
+                batch_yaml=$(mktemp)
+                count=0
+            fi
         done
+        # Ensure all background batch submissions cleanly finish before looping
+        wait
+        rm -f "$batch_yaml"
     fi
     
     # Sleep gently before checking the cluster state again
