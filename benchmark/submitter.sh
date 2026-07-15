@@ -40,6 +40,8 @@ START_TIME=$(date +%s)
 END_TIME=$(( START_TIME + DURATION ))
 idx=1
 
+# Maintain concurrency by continuously polling the Kubernetes API
+# until the DURATION window ends.
 # We rely on a consistent prefix to find our active pods
 POD_PREFIX="swebench-run-"
 
@@ -59,6 +61,7 @@ while [ $(date +%s) -lt $END_TIME ]; do
                 break 2
             fi
             
+            # Select a random SWE-bench image for this pod to simulate varied agent behavior
             rand_idx=$(( RANDOM % NUM_IMAGES ))
             image="${IMAGES[$rand_idx]}"
             pod_name="${POD_PREFIX}${idx}-$RANDOM"
