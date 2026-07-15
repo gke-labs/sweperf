@@ -10,7 +10,7 @@ class TestReplayScript(unittest.TestCase):
         # We need the path to the real replay script
         # Assuming this test runs from the root of the repo or from tests/
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        replay_script_src = os.path.join(repo_root, 'benchmark', 'replay.py')
+        replay_script_src = os.path.join(repo_root, 'generate-images', 'replay.py')
         
         self.assertTrue(os.path.exists(replay_script_src), f"Replay script not found at {replay_script_src}")
         
@@ -72,7 +72,7 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
 
     def test_replay_wait_for_claim(self):
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        replay_script_src = os.path.join(repo_root, 'benchmark', 'replay.py')
+        replay_script_src = os.path.join(repo_root, 'generate-images', 'replay.py')
         
         with tempfile.TemporaryDirectory() as temp_dir:
             trace = ["echo 'post_claim_execution_123'"]
@@ -122,7 +122,7 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
 
     def test_replay_wait_for_start_port(self):
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        replay_script_src = os.path.join(repo_root, 'benchmark', 'replay.py')
+        replay_script_src = os.path.join(repo_root, 'generate-images', 'replay.py')
         
         with tempfile.TemporaryDirectory() as temp_dir:
             trace = ["echo 'post_port_execution_123'"]
@@ -173,7 +173,7 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
 
     def test_replay_git_diff_no_pager(self):
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        replay_script_src = os.path.join(repo_root, 'benchmark', 'replay.py')
+        replay_script_src = os.path.join(repo_root, 'generate-images', 'replay.py')
         
         with tempfile.TemporaryDirectory() as temp_dir:
             trace = [
