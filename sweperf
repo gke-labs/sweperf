@@ -23,6 +23,7 @@ COMMAND=$1
 shift
 
 case "$COMMAND" in
+    # Creates a custom GKE cluster optimized for high pod density
     create-cluster)
         if [ "$#" -ne 4 ]; then
             echo "Usage: $0 create-cluster <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME>"
@@ -80,6 +81,7 @@ case "$COMMAND" in
         echo "Cluster: $CLUSTER_NAME"
         ;;
 
+    # Uses gcrane to natively pull/push all images avoiding local docker saves
     copy-images)
         if [ "$#" -ne 1 ]; then
             echo "Usage: $0 copy-images <DEST_PREFIX>"
@@ -105,6 +107,7 @@ case "$COMMAND" in
         echo "=== Copy complete! ==="
         ;;
 
+    # Pulls traces from SWE-bench experiments, generates replay Docker images, and pushes them to a registry
     generate-images)
         PROJECT_ID=""
         REGION=""
@@ -148,6 +151,7 @@ case "$COMMAND" in
         echo "=== Done! Images generated and pushed. ==="
         ;;
 
+    # Ensures images are available on the worker nodes beforehand to prevent network bottlenecks
     prepull-images)
         echo "=== Pre-pulling Test Images ==="
         GENERATED_IMAGES_FILE="$(pwd)/generated_images.txt"
@@ -165,6 +169,7 @@ case "$COMMAND" in
         echo "=== Done! Images pre-pulled. ==="
         ;;
 
+    # Runs the main load-testing loop: submits pods to maintain concurrency and monitors performance
     run-benchmark)
         if [ "$#" -ne 2 ]; then
             echo "Usage: $0 run-benchmark <DURATION_SECONDS> <CONCURRENCY>"

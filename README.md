@@ -2,6 +2,14 @@
 
 SWE-perf provides a suite of standalone, pre-built Docker containers that emulate the behavior of autonomous coding agents (like SWE-agent or OpenHands). This suite allows teams to evaluate infrastructure performance under the heavy, bursty load of AI agents, without actually needing to run an expensive LLM in the loop.
 
+## Table of Contents
+- [The Image Suite](#the-image-suite)
+- [Getting the Images](#-getting-the-images)
+- [Image Properties & Usage](#image-properties--usage)
+- [Building / Regenerating Images](#building--regenerating-images-advanced)
+- [Cluster Infrastructure & Benchmarking](#optional-cluster-infrastructure--benchmarking)
+- [Testing](#testing)
+
 ## The Image Suite
 
 The core value of SWE-perf is the image suite itself. Each image replicates an autonomous agent interacting with a codebase during a specific SWE-bench task.
