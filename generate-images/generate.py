@@ -131,7 +131,7 @@ ENV SWEPERF_TRAJECTORY_SOURCE="{url_or_path}"
 RUN echo '{{"base_image": "{base_image}", "trajectory_source": "{url_or_path}"}}' > /sweperf_metadata.json
 # Ensure python3 and pexpect are installed (sometimes SWE-bench images have python but no pexpect)
 RUN if command -v pip &> /dev/null; then pip install pexpect; else apt-get update && apt-get install -y python3-pexpect; fi
-COPY benchmark/replay.py /replay.py
+COPY generate-images/replay.py /replay.py
 COPY {trace_filename} /trace.json
 ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
 """
@@ -203,7 +203,7 @@ def main():
             print(f"Error: {trace_filename} not found.")
             sys.exit(1)
         base_image = "ubuntu:22.04" # Use ubuntu for simple test to avoid pulling massive swebench images
-        dockerfile_content = f"FROM {base_image}\nLABEL \"sweperf.base_image\"=\"{base_image}\"\nLABEL \"sweperf.trajectory_source\"=\"test_trace.json\"\nENV SWEPERF_BASE_IMAGE=\"{base_image}\"\nENV SWEPERF_TRAJECTORY_SOURCE=\"test_trace.json\"\nRUN echo '{{\"base_image\": \"{base_image}\", \"trajectory_source\": \"test_trace.json\"}}' > /sweperf_metadata.json\nRUN apt-get update && apt-get install -y python3 python3-pexpect\nCOPY benchmark/replay.py /replay.py\nCOPY {trace_filename} /trace.json\nENTRYPOINT [\"python3\", \"/replay.py\", \"/trace.json\"]\n"
+        dockerfile_content = f"FROM {base_image}\nLABEL \"sweperf.base_image\"=\"{base_image}\"\nLABEL \"sweperf.trajectory_source\"=\"test_trace.json\"\nENV SWEPERF_BASE_IMAGE=\"{base_image}\"\nENV SWEPERF_TRAJECTORY_SOURCE=\"test_trace.json\"\nRUN echo '{{\"base_image\": \"{base_image}\", \"trajectory_source\": \"test_trace.json\"}}' > /sweperf_metadata.json\nRUN apt-get update && apt-get install -y python3 python3-pexpect\nCOPY generate-images/replay.py /replay.py\nCOPY {trace_filename} /trace.json\nENTRYPOINT [\"python3\", \"/replay.py\", \"/trace.json\"]\n"
         dockerfile_name = "test.Dockerfile"
         with open(dockerfile_name, "w") as f:
             f.write(dockerfile_content)

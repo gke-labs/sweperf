@@ -31,6 +31,31 @@ def main():
                     pass
             time.sleep(1)
 
+    if os.environ.get("WAIT_FOR_START_PORT"):
+        import socket
+        port = int(os.environ.get("WAIT_FOR_START_PORT"))
+        print(f"Waiting for 'start' command on port {port}...")
+        sys.stdout.flush()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind(('', port))
+            s.listen()
+            while True:
+                try:
+                    conn, addr = s.accept()
+                    with conn:
+                        data = conn.recv(1024)
+                        text = data.decode('utf-8', errors='ignore').lower()
+                        if 'start' in text:
+                            conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nOK\n")
+                            break
+                        else:
+                            conn.sendall(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+                except Exception as e:
+                    pass
+        print("Start signal received via port!")
+        sys.stdout.flush()
+
     if len(sys.argv) != 2:
         print("Usage: python3 replay.py <trace.json>")
         sys.exit(1)
@@ -45,7 +70,10 @@ def main():
         
     print(f"Loaded {len(commands)} commands to replay.")
     
-    child = pexpect.spawn('bash --norc --noprofile', encoding='utf-8', timeout=None)
+    env = os.environ.copy()
+    env['PAGER'] = 'cat'
+    env['GIT_PAGER'] = 'cat'
+    child = pexpect.spawn('bash --norc --noprofile', encoding='utf-8', timeout=None, env=env)
     
     # Disable terminal echo so we don't see the command twice
     child.sendline('stty -echo')
@@ -71,7 +99,8 @@ def main():
             # Median: 6.00s, P90: 12.00s, Avg: 15.65s, Max: 169s
             mu = float(os.environ.get("LLM_LATENCY_MU", "2.0414"))
             sigma = float(os.environ.get("LLM_LATENCY_SIGMA", "0.8674"))
-            sleep_time = max(0.5, random.lognormvariate(mu, sigma))
+            min_latency = float(os.environ.get("LLM_LATENCY_MIN", "0.5"))
+            sleep_time = max(min_latency, random.lognormvariate(mu, sigma))
             
 
         if not command.strip():
