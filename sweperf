@@ -7,6 +7,7 @@ usage() {
     echo "Commands:"
     echo "  create-cluster <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME>   Creates GKE cluster and installs sandbox"
     echo "  copy-images <DEST_PREFIX>                                         Copies all images from the official registry to another using gcrane"
+    echo "  generate-image-list <TARGET_PREFIX>                               Generates local image list files by querying tags from a target repository"
     echo "  generate-images --project <PROJECT> --region <REGION> --repo <REPO> [--limit LIMIT] [--run RUN_NAME]"
     echo "                                                                    Generates, pushes, and prepulls SWE-bench images"
     echo "  prepull-images                                                    Prepulls SWE-bench images from generated_images.txt"
@@ -105,6 +106,40 @@ case "$COMMAND" in
         echo "=== Copying images from $SRC to $DEST ==="
         "$GCRANE_BIN" cp -r "$SRC" "$DEST"
         echo "=== Copy complete! ==="
+        ;;
+
+    # Fetches tags from a given registry prefix and regenerates the local generated_images.txt and .yaml files
+    generate-image-list)
+        if [ "$#" -ne 1 ]; then
+            echo "Usage: $0 generate-image-list <TARGET_PREFIX>"
+            echo "Example: $0 generate-image-list us-central1-docker.pkg.dev/my-project/my-repo"
+            exit 1
+        fi
+        TARGET_PREFIX="$1/sweperf"
+        GENERATED_IMAGES_FILE="$(pwd)/generated_images.txt"
+        GENERATED_YAML_FILE="$(pwd)/generated_images.yaml"
+        
+        if ! command -v gcrane &> /dev/null; then
+            GCRANE_BIN="$(dirname "$0")/.bin/gcrane"
+            if [ ! -f "$GCRANE_BIN" ]; then
+                echo "Installing gcrane locally..."
+                mkdir -p "$(dirname "$0")/.bin"
+                env GOBIN="$(cd $(dirname "$0") && pwd)/.bin" go install github.com/google/go-containerregistry/cmd/gcrane@latest
+            fi
+        else
+            GCRANE_BIN="gcrane"
+        fi
+
+        echo "=== Generating image list from $TARGET_PREFIX ==="
+        # Fetch tags, exclude digest lines containing '@', and output full image paths
+        "$GCRANE_BIN" ls "$TARGET_PREFIX" | grep -v '@' > "$GENERATED_IMAGES_FILE"
+        
+        echo "SWE_BENCH_IMAGES:" > "$GENERATED_YAML_FILE"
+        while IFS= read -r line; do
+            echo "  - \"$line\"" >> "$GENERATED_YAML_FILE"
+        done < "$GENERATED_IMAGES_FILE"
+        
+        echo "=== Done! Image list generated in generated_images.txt and generated_images.yaml ==="
         ;;
 
     # Pulls traces from SWE-bench experiments, generates replay Docker images, and pushes them to a registry

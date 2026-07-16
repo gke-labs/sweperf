@@ -37,9 +37,13 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 # 2. Trigger the server-to-server copy into your destination Artifact Registry
 ./sweperf copy-images \
   us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>
+
+# 3. Generate your local image index to point to your freshly-copied repo
+./sweperf generate-image-list \
+  us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>
 ```
 
-By explicitly copying the images into your own project, your GKE clusters and VMs gain native, frictionless access without having to navigate cross-project IAM restrictions or service account key sharing.
+By explicitly copying the images into your own project and generating the local manifests, your GKE clusters and VMs gain native, frictionless access without having to navigate cross-project IAM restrictions or service account key sharing.
 
 Here is an example Pod spec using one of the newly copied images:
 
