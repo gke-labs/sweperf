@@ -12,9 +12,9 @@ from process_metrics import parse_metrics, percentile, process_metrics, parse_jo
 class TestMetrics(unittest.TestCase):
     def test_parse_metrics(self):
         lines = [
-            "node-1 100m 2% 1024Mi 10%",
-            "node-1 200m 4% 2Gi 20%",
-            "node-2 500m 10% 500Mi 5%"
+            "1234567890 node-1 100m 1024Mi 2",
+            "1234567895 node-1 200m 2Gi 4",
+            "1234567890 node-2 500m 500Mi 10"
         ]
         data = parse_metrics(lines)
         self.assertEqual(data["node-1"]["cpu"], [100, 200])
@@ -49,7 +49,8 @@ class TestMetrics(unittest.TestCase):
                             "state": {
                                 "terminated": {
                                     "finishedAt": "2023-10-10T12:01:05Z",
-                                    "exitCode": 0
+                                    "exitCode": 0,
+                                    "message": "[REPLAY_STATS] Successes: 5, Failures: 1"
                                 }
                             }
                         }]
@@ -64,7 +65,8 @@ class TestMetrics(unittest.TestCase):
                                 "terminated": {
                                     "finishedAt": "2023-10-10T12:01:40Z",
                                     "exitCode": 1,
-                                    "reason": "OOMKilled"
+                                    "reason": "OOMKilled",
+                                    "message": "[REPLAY_STATS] Successes: 2, Failures: 2"
                                 }
                             }
                         }]
@@ -85,6 +87,8 @@ class TestMetrics(unittest.TestCase):
             self.assertEqual(metrics["failed"], 1)
             self.assertEqual(metrics["oom_killed"], 1)
             self.assertEqual(metrics["other_errors"], 0)
+            self.assertEqual(metrics["cmd_successes"], 7)
+            self.assertEqual(metrics["cmd_failures"], 3)
         finally:
             os.remove(temp_name)
 
@@ -98,6 +102,8 @@ class TestMetrics(unittest.TestCase):
             'failed': 1,
             'oom_killed': 1,
             'other_errors': 0,
+            'cmd_successes': 8,
+            'cmd_failures': 2,
         }
         report = process_job_metrics(metrics)
         self.assertIn("Completed Jobs:** 2", report)
@@ -107,6 +113,7 @@ class TestMetrics(unittest.TestCase):
         self.assertIn("Avg: 45.0", report)
         self.assertIn("Time-to-Start", report)
         self.assertIn("Avg: 7.5", report)
+        self.assertIn("Command Execution:** 8 Succeeded, 2 Failed (20.0% failure rate)", report)
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-if [ "$#" -ne 4 ]; then
-    echo "Usage: $0 <pod_template.yaml> <concurrency> <duration_seconds> <images_file>"
+if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
+    echo "Usage: $0 <pod_template.yaml> <concurrency> <duration_seconds> <images_file> [DO_GIT_PULL]"
     exit 1
 fi
 
@@ -10,6 +10,7 @@ TEMPLATE=$1
 CONCURRENCY=$2
 DURATION=$3
 IMAGES_FILE=$4
+DO_GIT_PULL=${5:-false}
 
 if [ ! -f "$TEMPLATE" ]; then
     echo "Error: Template file $TEMPLATE not found."
@@ -66,7 +67,7 @@ while [ $(date +%s) -lt $END_TIME ]; do
             image="${IMAGES[$rand_idx]}"
             pod_name="${POD_PREFIX}${idx}-$RANDOM"
             
-            sed -e "s|{{IMAGE}}|$image|g" -e "s|{{NAME}}|$pod_name|g" "$TEMPLATE" >> "$batch_yaml"
+            sed -e "s|{{IMAGE}}|$image|g" -e "s|{{NAME}}|$pod_name|g" -e "s|{{DO_GIT_PULL}}|$DO_GIT_PULL|g" "$TEMPLATE" >> "$batch_yaml"
             echo "---" >> "$batch_yaml"
             
             count=$((count + 1))

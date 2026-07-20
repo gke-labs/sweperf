@@ -1,0 +1,38 @@
+Name:             test-pull-sympy
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             <none>
+Labels:           run=test-pull-sympy
+Annotations:      cloud.google.com/cluster_autoscaler_unhelpable_since: 2026-07-16T22:41:10+0000
+                  cloud.google.com/cluster_autoscaler_unhelpable_until: Inf
+Status:           Pending
+IP:               
+IPs:              <none>
+Containers:
+  test-pull-sympy:
+    Image:        us-central1-docker.pkg.dev/bsalmon-gke-dev/test-repo/sweperf:sympy__sympy-19637
+    Port:         <none>
+    Host Port:    <none>
+    Environment:  <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-znkvg (ro)
+Conditions:
+  Type           Status
+  PodScheduled   False 
+Volumes:
+  kube-api-access-znkvg:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason             Age   From                Message
+  ----     ------             ----  ----                -------
+  Warning  FailedScheduling   8s    default-scheduler   0/3 nodes are available: 3 Too many pods. no new claims to deallocate, preemption: 0/3 nodes are available: 3 No preemption victims found for incoming pod.
+  Normal   NotTriggerScaleUp  8s    cluster-autoscaler  Pod didn't trigger scale-up:

@@ -1,0 +1,4 @@
+NAME                                             STATUS   ROLES    AGE     VERSION               INTERNAL-IP    EXTERNAL-IP       OS-IMAGE                             KERNEL-VERSION   CONTAINER-RUNTIME
+gke-sweperf-bench-2-default-pool-1ad400d3-57pd   Ready    <none>   6h11m   v1.35.5-gke.1241004   10.128.0.110   35.224.84.74      Container-Optimized OS from Google   6.12.85+         containerd://2.1.7
+gke-sweperf-bench-2-default-pool-1ad400d3-p2x1   Ready    <none>   6h11m   v1.35.5-gke.1241004   10.128.0.108   34.132.3.133      Container-Optimized OS from Google   6.12.85+         containerd://2.1.7
+gke-sweperf-bench-2-default-pool-1ad400d3-s1jw   Ready    <none>   6h11m   v1.35.5-gke.1241004   10.128.0.109   136.113.147.182   Container-Optimized OS from Google   6.12.85+         containerd://2.1.7

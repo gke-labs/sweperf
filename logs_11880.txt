@@ -1,0 +1,2000 @@
+Loaded 37 commands to replay.
+[92m$ ls -R[0m
+.:
+AUTHORS		  Gruntfile.js	  MANIFEST.in  extras	     setup.cfg
+CONTRIBUTING.rst  INSTALL	  README.rst   js_tests      setup.py
+Django.egg-info   LICENSE	  django       package.json  tests
+FUNDING.yml	  LICENSE.python  docs	       scripts	     tox.ini
+
+./Django.egg-info:
+PKG-INFO     dependency_links.txt  not-zip-safe  top_level.txt
+SOURCES.txt  entry_points.txt	   requires.txt
+
+./django:
+__init__.py  apps  contrib  dispatch  middleware    templatetags  utils
+__main__.py  bin   core     forms     shortcuts.py  test	  views
+__pycache__  conf  db	    http      template	    urls
+
+./django/__pycache__:
+__init__.cpython-36.pyc
+
+./django/apps:
+__init__.py  config.py	registry.py
+
+./django/bin:
+django-admin.py
+
+./django/conf:
+__init__.py  app_template  global_settings.py  locale  project_template  urls
+
+./django/conf/app_template:
+__init__.py-tpl  apps.py-tpl  models.py-tpl  views.py-tpl
+admin.py-tpl	 migrations   tests.py-tpl
+
+./django/conf/app_template/migrations:
+__init__.py-tpl
+
+./django/conf/locale:
+__init__.py  br     dsb    es_CO  fi  hr   it	lb  nb	pt_BR	 sv   uk
+af	     bs     el	   es_MX  fr  hsb  ja	lt  ne	ro	 sw   ur
+ar	     ca     en	   es_NI  fy  hu   ka	lv  nl	ru	 ta   vi
+ast	     cs     en_AU  es_PR  ga  hy   kab	mk  nn	sk	 te   zh_Hans
+az	     cy     en_GB  es_VE  gd  ia   kk	ml  os	sl	 th   zh_Hant
+be	     da     eo	   et	  gl  id   km	mn  pa	sq	 tr
+bg	     de     es	   eu	  he  io   kn	mr  pl	sr	 tt
+bn	     de_CH  es_AR  fa	  hi  is   ko	my  pt	sr_Latn  udm
+
+./django/conf/locale/af:
+LC_MESSAGES
+
+./django/conf/locale/af/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ar:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/ar/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ast:
+LC_MESSAGES
+
+./django/conf/locale/ast/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/az:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/az/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/be:
+LC_MESSAGES
+
+./django/conf/locale/be/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/bg:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/bg/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/bn:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/bn/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/br:
+LC_MESSAGES
+
+./django/conf/locale/br/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/bs:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/bs/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ca:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/ca/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/cs:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/cs/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/cy:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/cy/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/da:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/da/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/de:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/de/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/de_CH:
+__init__.py  formats.py
+
+./django/conf/locale/dsb:
+LC_MESSAGES
+
+./django/conf/locale/dsb/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/el:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/el/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/en:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/en/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/en_AU:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/en_AU/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/en_GB:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/en_GB/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/eo:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/eo/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/es:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/es/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/es_AR:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/es_AR/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/es_CO:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/es_CO/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/es_MX:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/es_MX/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/es_NI:
+__init__.py  formats.py
+
+./django/conf/locale/es_PR:
+__init__.py  formats.py
+
+./django/conf/locale/es_VE:
+LC_MESSAGES
+
+./django/conf/locale/es_VE/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/et:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/et/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/eu:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/eu/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/fa:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/fa/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/fi:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/fi/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/fr:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/fr/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/fy:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/fy/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ga:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/ga/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/gd:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/gd/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/gl:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/gl/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/he:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/he/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/hi:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/hi/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/hr:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/hr/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/hsb:
+LC_MESSAGES
+
+./django/conf/locale/hsb/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/hu:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/hu/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/hy:
+LC_MESSAGES
+
+./django/conf/locale/hy/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ia:
+LC_MESSAGES
+
+./django/conf/locale/ia/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/id:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/id/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/io:
+LC_MESSAGES
+
+./django/conf/locale/io/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/is:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/is/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/it:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/it/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ja:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/ja/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ka:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/ka/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/kab:
+LC_MESSAGES
+
+./django/conf/locale/kab/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/kk:
+LC_MESSAGES
+
+./django/conf/locale/kk/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/km:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/km/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/kn:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/kn/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ko:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/ko/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/lb:
+LC_MESSAGES
+
+./django/conf/locale/lb/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/lt:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/lt/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/lv:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/lv/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/mk:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/mk/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ml:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/ml/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/mn:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/mn/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/mr:
+LC_MESSAGES
+
+./django/conf/locale/mr/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/my:
+LC_MESSAGES
+
+./django/conf/locale/my/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/nb:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/nb/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ne:
+LC_MESSAGES
+
+./django/conf/locale/ne/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/nl:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/nl/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/nn:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/nn/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/os:
+LC_MESSAGES
+
+./django/conf/locale/os/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/pa:
+LC_MESSAGES
+
+./django/conf/locale/pa/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/pl:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/pl/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/pt:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/pt/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/pt_BR:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/pt_BR/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ro:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/ro/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ru:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/ru/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/sk:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/sk/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/sl:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/sl/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/sq:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/sq/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/sr:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/sr/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/sr_Latn:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/sr_Latn/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/sv:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/sv/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/sw:
+LC_MESSAGES
+
+./django/conf/locale/sw/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ta:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/ta/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/te:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/te/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/th:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/th/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/tr:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/tr/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/tt:
+LC_MESSAGES
+
+./django/conf/locale/tt/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/udm:
+LC_MESSAGES
+
+./django/conf/locale/udm/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/uk:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/uk/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/ur:
+LC_MESSAGES
+
+./django/conf/locale/ur/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/vi:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/vi/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/zh_Hans:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/zh_Hans/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/locale/zh_Hant:
+LC_MESSAGES  __init__.py  formats.py
+
+./django/conf/locale/zh_Hant/LC_MESSAGES:
+django.mo  django.po
+
+./django/conf/project_template:
+manage.py-tpl  project_name
+
+./django/conf/project_template/project_name:
+__init__.py-tpl  asgi.py-tpl  settings.py-tpl  urls.py-tpl  wsgi.py-tpl
+
+./django/conf/urls:
+__init__.py  i18n.py  static.py
+
+./django/contrib:
+__init__.py  auth	   gis	     postgres	sitemaps     syndication
+admin	     contenttypes  humanize  redirects	sites
+admindocs    flatpages	   messages  sessions	staticfiles
+
+./django/contrib/admin:
+__init__.py  checks.py	    forms.py	models.py   templates	  views
+actions.py   decorators.py  helpers.py	options.py  templatetags  widgets.py
+apps.py      exceptions.py  locale	sites.py    tests.py
+bin	     filters.py     migrations	static	    utils.py
+
+./django/contrib/admin/bin:
+compress.py
+
+./django/contrib/admin/locale:
+af   bn  de	es     fa  he	id   kk  mk  nl     ro	     sv  udm
+am   br  dsb	es_AR  fi  hi	io   km  ml  nn     ru	     sw  uk
+ar   bs  el	es_CO  fr  hr	is   kn  mn  os     sk	     ta  ur
+ast  ca  en	es_MX  fy  hsb	it   ko  mr  pa     sl	     te  vi
+az   cs  en_AU	es_VE  ga  hu	ja   lb  my  pl     sq	     th  zh_Hans
+be   cy  en_GB	et     gd  hy	ka   lt  nb  pt     sr	     tr  zh_Hant
+bg   da  eo	eu     gl  ia	kab  lv  ne  pt_BR  sr_Latn  tt
+
+./django/contrib/admin/locale/af:
+LC_MESSAGES
+
+./django/contrib/admin/locale/af/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/am:
+LC_MESSAGES
+
+./django/contrib/admin/locale/am/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admin/locale/ar:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ar/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ast:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ast/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/az:
+LC_MESSAGES
+
+./django/contrib/admin/locale/az/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/be:
+LC_MESSAGES
+
+./django/contrib/admin/locale/be/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/bg:
+LC_MESSAGES
+
+./django/contrib/admin/locale/bg/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/bn:
+LC_MESSAGES
+
+./django/contrib/admin/locale/bn/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/br:
+LC_MESSAGES
+
+./django/contrib/admin/locale/br/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/bs:
+LC_MESSAGES
+
+./django/contrib/admin/locale/bs/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ca:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ca/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/cs:
+LC_MESSAGES
+
+./django/contrib/admin/locale/cs/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/cy:
+LC_MESSAGES
+
+./django/contrib/admin/locale/cy/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/da:
+LC_MESSAGES
+
+./django/contrib/admin/locale/da/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/de:
+LC_MESSAGES
+
+./django/contrib/admin/locale/de/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/dsb:
+LC_MESSAGES
+
+./django/contrib/admin/locale/dsb/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/el:
+LC_MESSAGES
+
+./django/contrib/admin/locale/el/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/en:
+LC_MESSAGES
+
+./django/contrib/admin/locale/en/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/en_AU:
+LC_MESSAGES
+
+./django/contrib/admin/locale/en_AU/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/en_GB:
+LC_MESSAGES
+
+./django/contrib/admin/locale/en_GB/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/eo:
+LC_MESSAGES
+
+./django/contrib/admin/locale/eo/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/es:
+LC_MESSAGES
+
+./django/contrib/admin/locale/es/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/es_AR:
+LC_MESSAGES
+
+./django/contrib/admin/locale/es_AR/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/es_CO:
+LC_MESSAGES
+
+./django/contrib/admin/locale/es_CO/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/es_MX:
+LC_MESSAGES
+
+./django/contrib/admin/locale/es_MX/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/es_VE:
+LC_MESSAGES
+
+./django/contrib/admin/locale/es_VE/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/et:
+LC_MESSAGES
+
+./django/contrib/admin/locale/et/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/eu:
+LC_MESSAGES
+
+./django/contrib/admin/locale/eu/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/fa:
+LC_MESSAGES
+
+./django/contrib/admin/locale/fa/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/fi:
+LC_MESSAGES
+
+./django/contrib/admin/locale/fi/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/fr:
+LC_MESSAGES
+
+./django/contrib/admin/locale/fr/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/fy:
+LC_MESSAGES
+
+./django/contrib/admin/locale/fy/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ga:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ga/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/gd:
+LC_MESSAGES
+
+./django/contrib/admin/locale/gd/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/gl:
+LC_MESSAGES
+
+./django/contrib/admin/locale/gl/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/he:
+LC_MESSAGES
+
+./django/contrib/admin/locale/he/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/hi:
+LC_MESSAGES
+
+./django/contrib/admin/locale/hi/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/hr:
+LC_MESSAGES
+
+./django/contrib/admin/locale/hr/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/hsb:
+LC_MESSAGES
+
+./django/contrib/admin/locale/hsb/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/hu:
+LC_MESSAGES
+
+./django/contrib/admin/locale/hu/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/hy:
+LC_MESSAGES
+
+./django/contrib/admin/locale/hy/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ia:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ia/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/id:
+LC_MESSAGES
+
+./django/contrib/admin/locale/id/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/io:
+LC_MESSAGES
+
+./django/contrib/admin/locale/io/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/is:
+LC_MESSAGES
+
+./django/contrib/admin/locale/is/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/it:
+LC_MESSAGES
+
+./django/contrib/admin/locale/it/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ja:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ja/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ka:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ka/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/kab:
+LC_MESSAGES
+
+./django/contrib/admin/locale/kab/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/kk:
+LC_MESSAGES
+
+./django/contrib/admin/locale/kk/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/km:
+LC_MESSAGES
+
+./django/contrib/admin/locale/km/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/kn:
+LC_MESSAGES
+
+./django/contrib/admin/locale/kn/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ko:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ko/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/lb:
+LC_MESSAGES
+
+./django/contrib/admin/locale/lb/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/lt:
+LC_MESSAGES
+
+./django/contrib/admin/locale/lt/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/lv:
+LC_MESSAGES
+
+./django/contrib/admin/locale/lv/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/mk:
+LC_MESSAGES
+
+./django/contrib/admin/locale/mk/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ml:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ml/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/mn:
+LC_MESSAGES
+
+./django/contrib/admin/locale/mn/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/mr:
+LC_MESSAGES
+
+./django/contrib/admin/locale/mr/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/my:
+LC_MESSAGES
+
+./django/contrib/admin/locale/my/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/nb:
+LC_MESSAGES
+
+./django/contrib/admin/locale/nb/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ne:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ne/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/nl:
+LC_MESSAGES
+
+./django/contrib/admin/locale/nl/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/nn:
+LC_MESSAGES
+
+./django/contrib/admin/locale/nn/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/os:
+LC_MESSAGES
+
+./django/contrib/admin/locale/os/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/pa:
+LC_MESSAGES
+
+./django/contrib/admin/locale/pa/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/pl:
+LC_MESSAGES
+
+./django/contrib/admin/locale/pl/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/pt:
+LC_MESSAGES
+
+./django/contrib/admin/locale/pt/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/pt_BR:
+LC_MESSAGES
+
+./django/contrib/admin/locale/pt_BR/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ro:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ro/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ru:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ru/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/sk:
+LC_MESSAGES
+
+./django/contrib/admin/locale/sk/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/sl:
+LC_MESSAGES
+
+./django/contrib/admin/locale/sl/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/sq:
+LC_MESSAGES
+
+./django/contrib/admin/locale/sq/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/sr:
+LC_MESSAGES
+
+./django/contrib/admin/locale/sr/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/sr_Latn:
+LC_MESSAGES
+
+./django/contrib/admin/locale/sr_Latn/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/sv:
+LC_MESSAGES
+
+./django/contrib/admin/locale/sv/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/sw:
+LC_MESSAGES
+
+./django/contrib/admin/locale/sw/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ta:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ta/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/te:
+LC_MESSAGES
+
+./django/contrib/admin/locale/te/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/th:
+LC_MESSAGES
+
+./django/contrib/admin/locale/th/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/tr:
+LC_MESSAGES
+
+./django/contrib/admin/locale/tr/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/tt:
+LC_MESSAGES
+
+./django/contrib/admin/locale/tt/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/udm:
+LC_MESSAGES
+
+./django/contrib/admin/locale/udm/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/uk:
+LC_MESSAGES
+
+./django/contrib/admin/locale/uk/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/ur:
+LC_MESSAGES
+
+./django/contrib/admin/locale/ur/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/vi:
+LC_MESSAGES
+
+./django/contrib/admin/locale/vi/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/zh_Hans:
+LC_MESSAGES
+
+./django/contrib/admin/locale/zh_Hans/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/locale/zh_Hant:
+LC_MESSAGES
+
+./django/contrib/admin/locale/zh_Hant/LC_MESSAGES:
+django.mo  django.po  djangojs.mo  djangojs.po
+
+./django/contrib/admin/migrations:
+0001_initial.py			  0003_logentry_add_action_flag_choices.py
+0002_logentry_remove_auto_add.py  __init__.py
+
+./django/contrib/admin/static:
+admin
+
+./django/contrib/admin/static/admin:
+css  fonts  img  js
+
+./django/contrib/admin/static/admin/css:
+autocomplete.css  dashboard.css  login.css	     rtl.css
+base.css	  fonts.css	 responsive.css      vendor
+changelists.css   forms.css	 responsive_rtl.css  widgets.css
+
+./django/contrib/admin/static/admin/css/vendor:
+select2
+
+./django/contrib/admin/static/admin/css/vendor/select2:
+LICENSE-SELECT2.md  select2.css  select2.min.css
+
+./django/contrib/admin/static/admin/fonts:
+LICENSE.txt  Roboto-Bold-webfont.woff	Roboto-Regular-webfont.woff
+README.txt   Roboto-Light-webfont.woff
+
+./django/contrib/admin/static/admin/img:
+LICENSE		    icon-changelink.svg   icon-yes.svg
+README.txt	    icon-clock.svg	  inline-delete.svg
+calendar-icons.svg  icon-deletelink.svg   search.svg
+gis		    icon-no.svg		  selector-icons.svg
+icon-addlink.svg    icon-unknown-alt.svg  sorting-icons.svg
+icon-alert.svg	    icon-unknown.svg	  tooltag-add.svg
+icon-calendar.svg   icon-viewlink.svg	  tooltag-arrowright.svg
+
+./django/contrib/admin/static/admin/img/gis:
+move_vertex_off.svg  move_vertex_on.svg
+
+./django/contrib/admin/static/admin/js:
+SelectBox.js	  autocomplete.js  collapse.min.js  popup_response.js	 vendor
+SelectFilter2.js  calendar.js	   core.js	    prepopulate.js
+actions.js	  cancel.js	   inlines.js	    prepopulate.min.js
+actions.min.js	  change_form.js   inlines.min.js   prepopulate_init.js
+admin		  collapse.js	   jquery.init.js   urlify.js
+
+./django/contrib/admin/static/admin/js/admin:
+DateTimeShortcuts.js  RelatedObjectLookups.js
+
+./django/contrib/admin/static/admin/js/vendor:
+jquery	select2  xregexp
+
+./django/contrib/admin/static/admin/js/vendor/jquery:
+LICENSE.txt  jquery.js	jquery.min.js
+
+./django/contrib/admin/static/admin/js/vendor/select2:
+LICENSE.md  i18n  select2.full.js  select2.full.min.js
+
+./django/contrib/admin/static/admin/js/vendor/select2/i18n:
+af.js  cs.js   et.js  hi.js   it.js  mk.js  pt-BR.js  sr-Cyrl.js  vi.js
+ar.js  da.js   eu.js  hr.js   ja.js  ms.js  pt.js     sr.js	  zh-CN.js
+az.js  de.js   fa.js  hsb.js  ka.js  nb.js  ro.js     sv.js	  zh-TW.js
+bg.js  dsb.js  fi.js  hu.js   km.js  ne.js  ru.js     th.js
+bn.js  el.js   fr.js  hy.js   ko.js  nl.js  sk.js     tk.js
+bs.js  en.js   gl.js  id.js   lt.js  pl.js  sl.js     tr.js
+ca.js  es.js   he.js  is.js   lv.js  ps.js  sq.js     uk.js
+
+./django/contrib/admin/static/admin/js/vendor/xregexp:
+LICENSE.txt  xregexp.js  xregexp.min.js
+
+./django/contrib/admin/templates:
+admin  registration
+
+./django/contrib/admin/templates/admin:
+404.html		       delete_selected_confirmation.html
+500.html		       edit_inline
+actions.html		       filter.html
+app_index.html		       includes
+auth			       index.html
+base.html		       invalid_setup.html
+base_site.html		       login.html
+change_form.html	       object_history.html
+change_form_object_tools.html  pagination.html
+change_list.html	       popup_response.html
+change_list_object_tools.html  prepopulated_fields_js.html
+change_list_results.html       search_form.html
+date_hierarchy.html	       submit_line.html
+delete_confirmation.html       widgets
+
+./django/contrib/admin/templates/admin/auth:
+user
+
+./django/contrib/admin/templates/admin/auth/user:
+add_form.html  change_password.html
+
+./django/contrib/admin/templates/admin/edit_inline:
+stacked.html  tabular.html
+
+./django/contrib/admin/templates/admin/includes:
+fieldset.html  object_delete_summary.html
+
+./django/contrib/admin/templates/admin/widgets:
+clearable_file_input.html  radio.html			url.html
+foreign_key_raw_id.html    related_widget_wrapper.html
+many_to_many_raw_id.html   split_datetime.html
+
+./django/contrib/admin/templates/registration:
+logged_out.html		      password_reset_confirm.html
+password_change_done.html     password_reset_done.html
+password_change_form.html     password_reset_email.html
+password_reset_complete.html  password_reset_form.html
+
+./django/contrib/admin/templatetags:
+__init__.py  admin_list.py  admin_modify.py  admin_urls.py  base.py  log.py
+
+./django/contrib/admin/views:
+__init__.py  autocomplete.py  decorators.py  main.py
+
+./django/contrib/admindocs:
+__init__.py  locale	    templates  utils.py
+apps.py      middleware.py  urls.py    views.py
+
+./django/contrib/admindocs/locale:
+af   br  dsb	es_AR  fi  hi	is   kn  mn  os     sk	     ta   ur
+ar   bs  el	es_CO  fr  hr	it   ko  mr  pa     sl	     te   vi
+ast  ca  en	es_MX  fy  hsb	ja   lb  my  pl     sq	     th   zh_Hans
+az   cs  en_AU	es_VE  ga  hu	ka   lt  nb  pt     sr	     tr   zh_Hant
+be   cy  en_GB	et     gd  ia	kab  lv  ne  pt_BR  sr_Latn  tt
+bg   da  eo	eu     gl  id	kk   mk  nl  ro     sv	     udm
+bn   de  es	fa     he  io	km   ml  nn  ru     sw	     uk
+
+./django/contrib/admindocs/locale/af:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/af/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ar:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ar/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ast:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ast/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/az:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/az/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/be:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/be/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/bg:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/bg/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/bn:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/bn/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/br:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/br/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/bs:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/bs/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ca:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ca/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/cs:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/cs/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/cy:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/cy/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/da:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/da/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/de:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/de/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/dsb:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/dsb/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/el:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/el/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/en:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/en/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/en_AU:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/en_AU/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/en_GB:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/en_GB/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/eo:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/eo/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/es:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/es/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/es_AR:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/es_AR/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/es_CO:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/es_CO/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/es_MX:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/es_MX/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/es_VE:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/es_VE/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/et:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/et/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/eu:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/eu/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/fa:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/fa/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/fi:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/fi/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/fr:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/fr/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/fy:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/fy/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ga:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ga/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/gd:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/gd/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/gl:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/gl/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/he:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/he/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/hi:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/hi/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/hr:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/hr/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/hsb:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/hsb/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/hu:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/hu/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ia:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ia/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/id:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/id/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/io:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/io/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/is:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/is/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/it:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/it/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ja:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ja/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ka:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ka/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/kab:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/kab/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/kk:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/kk/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/km:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/km/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/kn:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/kn/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ko:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ko/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/lb:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/lb/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/lt:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/lt/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/lv:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/lv/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/mk:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/mk/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ml:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ml/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/mn:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/mn/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/mr:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/mr/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/my:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/my/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/nb:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/nb/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ne:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ne/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/nl:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/nl/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/nn:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/nn/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/os:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/os/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/pa:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/pa/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/pl:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/pl/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/pt:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/pt/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/pt_BR:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/pt_BR/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ro:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ro/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ru:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ru/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/sk:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/sk/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/sl:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/sl/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/sq:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/sq/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/sr:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/sr/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/sr_Latn:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/sr_Latn/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/sv:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/sv/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/sw:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/sw/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ta:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ta/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/te:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/te/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/th:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/th/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/tr:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/tr/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/tt:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/tt/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/udm:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/udm/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/uk:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/uk/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/ur:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/ur/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/vi:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/vi/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/zh_Hans:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/zh_Hans/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/locale/zh_Hant:
+LC_MESSAGES
+
+./django/contrib/admindocs/locale/zh_Hant/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/admindocs/templates:
+admin_doc
+
+./django/contrib/admindocs/templates/admin_doc:
+bookmarklets.html      model_index.html		   view_detail.html
+index.html	       template_detail.html	   view_index.html
+missing_docutils.html  template_filter_index.html
+model_detail.html      template_tag_index.html
+
+./django/contrib/auth:
+__init__.py		 forms.py	password_validation.py
+admin.py		 handlers	signals.py
+apps.py			 hashers.py	templates
+backends.py		 locale		tokens.py
+base_user.py		 management	urls.py
+checks.py		 middleware.py	validators.py
+common-passwords.txt.gz  migrations	views.py
+context_processors.py	 mixins.py
+decorators.py		 models.py
+
+./django/contrib/auth/handlers:
+__init__.py  modwsgi.py
+
+./django/contrib/auth/locale:
+af   br  dsb	es_AR  fi  hi	io   km  ml  nn     ru	     sw   uk
+ar   bs  el	es_CO  fr  hr	is   kn  mn  os     sk	     ta   ur
+ast  ca  en	es_MX  fy  hsb	it   ko  mr  pa     sl	     te   vi
+az   cs  en_AU	es_VE  ga  hu	ja   lb  my  pl     sq	     th   zh_Hans
+be   cy  en_GB	et     gd  hy	ka   lt  nb  pt     sr	     tr   zh_Hant
+bg   da  eo	eu     gl  ia	kab  lv  ne  pt_BR  sr_Latn  tt
+bn   de  es	fa     he  id	kk   mk  nl  ro     sv	     udm
+
+./django/contrib/auth/locale/af:
+LC_MESSAGES
+
+./django/contrib/auth/locale/af/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/ar:
+LC_MESSAGES
+
+./django/contrib/auth/locale/ar/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/ast:
+LC_MESSAGES
+
+./django/contrib/auth/locale/ast/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/az:
+LC_MESSAGES
+
+./django/contrib/auth/locale/az/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/be:
+LC_MESSAGES
+
+./django/contrib/auth/locale/be/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/bg:
+LC_MESSAGES
+
+./django/contrib/auth/locale/bg/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/bn:
+LC_MESSAGES
+
+./django/contrib/auth/locale/bn/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/br:
+LC_MESSAGES
+
+./django/contrib/auth/locale/br/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/bs:
+LC_MESSAGES
+
+./django/contrib/auth/locale/bs/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/ca:
+LC_MESSAGES
+
+./django/contrib/auth/locale/ca/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/cs:
+LC_MESSAGES
+
+./django/contrib/auth/locale/cs/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/cy:
+LC_MESSAGES
+
+./django/contrib/auth/locale/cy/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/da:
+LC_MESSAGES
+
+./django/contrib/auth/locale/da/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/de:
+LC_MESSAGES
+
+./django/contrib/auth/locale/de/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/dsb:
+LC_MESSAGES
+
+./django/contrib/auth/locale/dsb/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/el:
+LC_MESSAGES
+
+./django/contrib/auth/locale/el/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/en:
+LC_MESSAGES
+
+./django/contrib/auth/locale/en/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/en_AU:
+LC_MESSAGES
+
+./django/contrib/auth/locale/en_AU/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/en_GB:
+LC_MESSAGES
+
+./django/contrib/auth/locale/en_GB/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/eo:
+LC_MESSAGES
+
+./django/contrib/auth/locale/eo/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/es:
+LC_MESSAGES
+
+./django/contrib/auth/locale/es/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/es_AR:
+LC_MESSAGES
+
+./django/contrib/auth/locale/es_AR/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/es_CO:
+LC_MESSAGES
+
+./django/contrib/auth/locale/es_CO/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/es_MX:
+LC_MESSAGES
+
+./django/contrib/auth/locale/es_MX/LC_MESSAGES:
+django.mo  django.po
+
+./django/contrib/auth/locale/es_VE:
+LC_MESSAGES
+
+./django/contrib/auth/locale/es_VE/LC_MESSAGES:
+django.mo  django.po
+

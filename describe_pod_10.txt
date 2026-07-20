@@ -1,0 +1,53 @@
+Name:             swebench-run-10-14013
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             gke-sweperf-bench-2-default-pool-1ad400d3-p2x1/10.128.0.108
+Start Time:       Thu, 16 Jul 2026 21:56:25 +0000
+Labels:           app=swebench
+                  topology.kubernetes.io/region=us-central1
+                  topology.kubernetes.io/zone=us-central1-b
+Annotations:      <none>
+Status:           Pending
+IP:               10.32.0.97
+IPs:
+  IP:  10.32.0.97
+Containers:
+  swebench:
+    Container ID:   
+    Image:          us-central1-docker.pkg.dev/bsalmon-gke-dev/test-repo/sweperf:sympy__sympy-19637
+    Image ID:       
+    Port:           <none>
+    Host Port:      <none>
+    State:          Waiting
+      Reason:       ImagePullBackOff
+    Ready:          False
+    Restart Count:  0
+    Environment:
+      PAGER:      cat
+      GIT_PAGER:  cat
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-dmchg (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       False 
+  ContainersReady             False 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-dmchg:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason   Age                    From     Message
+  ----     ------   ----                   ----     -------
+  Normal   BackOff  2m48s (x160 over 42m)  kubelet  spec.containers{swebench}: Back-off pulling image "us-central1-docker.pkg.dev/bsalmon-gke-dev/test-repo/sweperf:sympy__sympy-19637"
+  Warning  Failed   2m33s (x159 over 42m)  kubelet  spec.containers{swebench}: Error: ImagePullBackOff

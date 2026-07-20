@@ -9,7 +9,16 @@ spec:
   containers:
   - name: swebench
     image: {{IMAGE}}
+    resources:
+      limits:
+        memory: "4Gi"
+        cpu: "12"
+      requests:
+        cpu: "10m"
+        memory: "10Mi"
     env:
+    - name: DO_GIT_PULL
+      value: "{{DO_GIT_PULL}}"
     - name: PAGER
       value: "cat"
     - name: GIT_PAGER

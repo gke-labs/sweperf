@@ -1,0 +1,6 @@
+NAME                    READY   STATUS             RESTARTS   AGE   IP           NODE                                             NOMINATED NODE   READINESS GATES
+swebench-run-10-14013   0/1     ImagePullBackOff   0          42m   10.32.0.97   gke-sweperf-bench-2-default-pool-1ad400d3-p2x1   <none>           <none>
+NAME                     READY   STATUS             RESTARTS   AGE   IP            NODE                                             NOMINATED NODE   READINESS GATES
+swebench-run-110-10353   0/1     ImagePullBackOff   0          42m   10.32.4.158   gke-sweperf-bench-2-default-pool-1ad400d3-57pd   <none>           <none>
+NAME                    READY   STATUS             RESTARTS   AGE   IP            NODE                                             NOMINATED NODE   READINESS GATES
+swebench-run-304-5932   0/1     ImagePullBackOff   0          42m   10.32.0.104   gke-sweperf-bench-2-default-pool-1ad400d3-p2x1   <none>           <none>

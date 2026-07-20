@@ -76,7 +76,7 @@ case "$COMMAND" in
 
         echo "=== 4. Copying Images to New Repository ==="
         IMAGE_DEST="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO_NAME"
-        "$0" copy-images "$IMAGE_DEST"
+        # "$0" copy-images "$IMAGE_DEST"
 
         echo "=== Done! Cluster Setup Complete. ==="
         echo "Cluster: $CLUSTER_NAME"
@@ -206,33 +206,46 @@ case "$COMMAND" in
 
     # Runs the main load-testing loop: submits pods to maintain concurrency and monitors performance
     run-benchmark)
+        DO_GIT_PULL="false"
+        if [ "$1" == "--git-pull" ]; then
+            DO_GIT_PULL="true"
+            shift
+        fi
+
         if [ "$#" -ne 2 ]; then
-            echo "Usage: $0 run-benchmark <DURATION_SECONDS> <CONCURRENCY>"
+            echo "Usage: $0 run-benchmark [--git-pull] <DURATION_SECONDS> <CONCURRENCY>"
             exit 1
         fi
         DURATION=$1
         CONCURRENCY=$2
 
-        rm -f node_metrics.txt pods.json
+        rm -f node_metrics.txt pods.json pod_metrics.txt
         echo "Starting heavily-aligned node metrics watcher..."
         python3 benchmark/node_watcher.py $DURATION &
         NODE_METRICS_PID=$!
+
+        echo "Starting pod watcher..."
+        python3 benchmark/pod_watcher.py $DURATION &
+        POD_WATCHER_PID=$!
 
         echo "Starting pod GC collector watcher..."
         python3 benchmark/collector.py $DURATION &
         COLLECTOR_PID=$!
 
-        echo "Starting submitter ($DURATION seconds, $CONCURRENCY pods)..."
-        ./benchmark/submitter.sh benchmark/pod_template.yaml $CONCURRENCY $DURATION generated_images.txt
+        echo "Starting submitter ($DURATION seconds, $CONCURRENCY pods, DO_GIT_PULL=$DO_GIT_PULL)..."
+        ./benchmark/submitter.sh benchmark/pod_template.yaml $CONCURRENCY $DURATION generated_images.txt $DO_GIT_PULL
 
         echo "Submitter finished. Stopping background watchers..."
         kill $NODE_METRICS_PID 2>/dev/null || true
         wait $NODE_METRICS_PID 2>/dev/null || true
+        kill $POD_WATCHER_PID 2>/dev/null || true
+        wait $POD_WATCHER_PID 2>/dev/null || true
         kill $COLLECTOR_PID 2>/dev/null || true
         wait $COLLECTOR_PID 2>/dev/null || true
 
         echo "Generating report..."
         python3 benchmark/process_metrics.py > report.md
+        python3 benchmark/process_image_metrics.py >> report.md
         cat report.md
         ;;
 

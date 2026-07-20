@@ -144,9 +144,11 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
     if build:
         tag_name = f"{image_prefix.rstrip('/')}:{instance_id}" if image_prefix else f"sweperf:{instance_id}"
         print(f"Building Docker image {tag_name}...")
-        cmd = ["docker", "build", "-t", tag_name, "-f", dockerfile_name, "."]
+        cmd = ["docker", "build", "--no-cache", "--rm", "--force-rm", "-t", tag_name, "-f", dockerfile_name, "."]
         try:
-            subprocess.run(cmd, check=True)
+            env = os.environ.copy()
+            env["DOCKER_BUILDKIT"] = "0" # Disable BuildKit to prevent it from pinning base images in cache
+            subprocess.run(cmd, env=env, check=True)
             print(f"Successfully built {tag_name}")
         except subprocess.CalledProcessError as e:
             print(f"Failed to build {tag_name}: {e}")
@@ -161,15 +163,15 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
                 print(f"Failed to push {tag_name}: {e}")
                 return False
 
-        print(f"Cleaning up local image {tag_name} to save disk space...")
-        subprocess.run(["docker", "rmi", tag_name], check=False)
-        print(f"Cleaning up base image {base_image} to save disk space...")
-        subprocess.run(["docker", "rmi", base_image], check=False)
-            
-    if os.path.exists(trace_filename):
-        os.remove(trace_filename)
-    if os.path.exists(dockerfile_name):
-        os.remove(dockerfile_name)
+        print(f"Cleaning up {tag_name} and base images to save disk space...")
+        subprocess.run(["docker", "rmi", "-f", tag_name], check=False)
+        subprocess.run(["docker", "rmi", "-f", base_image], check=False)
+        subprocess.run(["docker", "image", "prune", "-f"], check=False)
+        
+    # if os.path.exists(trace_filename):
+    #     os.remove(trace_filename)
+    # if os.path.exists(dockerfile_name):
+    #     os.remove(dockerfile_name)
         
     return True
 

@@ -20,7 +20,8 @@ class TestReplayScript(unittest.TestCase):
                 "echo 'unique_test_string_12345'",
                 "expr 10 + 25",
                 "mkdir my_test_directory",
-                "ls -l"
+                "ls -l",
+                "ls nonexistent_dir"
             ]
             
             trace_path = os.path.join(temp_dir, "trace.json")
@@ -65,6 +66,9 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
             self.assertIn("unique_test_string_12345", output, "Failed to find 'echo' output")
             self.assertIn("35", output, "Failed to find 'expr' output")
             self.assertIn("my_test_directory", output, "Failed to find 'mkdir'/'ls' output")
+            
+            # 7. Check the replay stats for successes and failures
+            self.assertIn("[REPLAY_STATS] Successes: 4, Failures: 1", output, "Failed to find correct success/failure counts in output")
             
             # Cleanup
             print(f"Cleaning up docker image {image_name}...")

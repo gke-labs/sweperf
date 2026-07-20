@@ -70,6 +70,8 @@ def parse_job_metrics(file_path):
         'failed': 0,
         'oom_killed': 0,
         'other_errors': 0,
+        'cmd_successes': 0,
+        'cmd_failures': 0,
     }
     try:
         with open(file_path, 'r') as f:
@@ -101,6 +103,7 @@ def parse_job_metrics(file_path):
                 finished_at = None
                 exit_code = None
                 reason = None
+                term_message = None
                 for c_status in status.get('containerStatuses', []):
                     term = c_status.get('state', {}).get('terminated', {})
                     if term.get('finishedAt'):
@@ -111,8 +114,19 @@ def parse_job_metrics(file_path):
                             pass
                         exit_code = term.get('exitCode')
                         reason = term.get('reason')
+                        term_message = term.get('message')
                         break
                 
+                if term_message and "[REPLAY_STATS]" in term_message:
+                    try:
+                        pts = term_message.split("Successes: ")[1]
+                        s_count = int(pts.split(",")[0].strip())
+                        f_count = int(pts.split("Failures: ")[1].strip())
+                        metrics['cmd_successes'] += s_count
+                        metrics['cmd_failures'] += f_count
+                    except Exception:
+                        pass
+
                 if not metrics['earliest_start'] or start_time < metrics['earliest_start']:
                     metrics['earliest_start'] = start_time
 
@@ -159,6 +173,11 @@ def process_job_metrics(metrics):
         report.append(f"- **Completed Jobs:** {len(lengths)} (Succeeded: {metrics['succeeded']}, Failed: {metrics['failed']})")
         if metrics['failed'] > 0:
             report.append(f"  - **Failures:** OOMKilled: {metrics['oom_killed']}, Other Errors: {metrics['other_errors']}")
+            
+        if metrics['cmd_failures'] > 0 or metrics['cmd_successes'] > 0:
+            total_cmds = metrics['cmd_failures'] + metrics['cmd_successes']
+            fail_rate = (metrics['cmd_failures'] / total_cmds) * 100
+            report.append(f"- **Command Execution:** {metrics['cmd_successes']} Succeeded, {metrics['cmd_failures']} Failed ({fail_rate:.1f}% failure rate)")
             
         report.append(f"- **Job Length (s):** Avg: {avg_len:.1f}, Max: {max_len:.1f}, P90: {p90_len:.1f}")
 

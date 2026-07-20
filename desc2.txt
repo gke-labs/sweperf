@@ -1,0 +1,55 @@
+Name:             test-pull-sympy-2
+Namespace:        default
+Priority:         0
+Service Account:  default
+Node:             gke-sweperf-bench-2-default-pool-1ad400d3-s1jw/10.128.0.109
+Start Time:       Thu, 16 Jul 2026 22:43:03 +0000
+Labels:           run=test-pull-sympy-2
+                  topology.kubernetes.io/region=us-central1
+                  topology.kubernetes.io/zone=us-central1-b
+Annotations:      <none>
+Status:           Pending
+IP:               10.32.3.91
+IPs:
+  IP:  10.32.3.91
+Containers:
+  test-pull-sympy-2:
+    Container ID:   
+    Image:          us-central1-docker.pkg.dev/bsalmon-gke-dev/test-repo/sweperf:sympy__sympy-19637
+    Image ID:       
+    Port:           <none>
+    Host Port:      <none>
+    State:          Waiting
+      Reason:       ImagePullBackOff
+    Ready:          False
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-bcml8 (ro)
+Conditions:
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       False 
+  ContainersReady             False 
+  PodScheduled                True 
+Volumes:
+  kube-api-access-bcml8:
+    Type:                    Projected (a volume that contains injected data from multiple sources)
+    TokenExpirationSeconds:  3607
+    ConfigMapName:           kube-root-ca.crt
+    Optional:                false
+    DownwardAPI:             true
+QoS Class:                   BestEffort
+Node-Selectors:              <none>
+Tolerations:                 node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
+                             node.kubernetes.io/unreachable:NoExecute op=Exists for 300s
+Events:
+  Type     Reason     Age                 From               Message
+  ----     ------     ----                ----               -------
+  Normal   Scheduled  109s                default-scheduler  Successfully assigned default/test-pull-sympy-2 to gke-sweperf-bench-2-default-pool-1ad400d3-s1jw
+  Normal   BackOff    26s (x5 over 108s)  kubelet            spec.containers{test-pull-sympy-2}: Back-off pulling image "us-central1-docker.pkg.dev/bsalmon-gke-dev/test-repo/sweperf:sympy__sympy-19637"
+  Warning  Failed     26s (x5 over 108s)  kubelet            spec.containers{test-pull-sympy-2}: Error: ImagePullBackOff
+  Normal   Pulling    12s (x4 over 109s)  kubelet            spec.containers{test-pull-sympy-2}: Pulling image "us-central1-docker.pkg.dev/bsalmon-gke-dev/test-repo/sweperf:sympy__sympy-19637"
+  Warning  Failed     11s (x4 over 108s)  kubelet            spec.containers{test-pull-sympy-2}: Failed to pull image "us-central1-docker.pkg.dev/bsalmon-gke-dev/test-repo/sweperf:sympy__sympy-19637": failed to pull and unpack image "us-central1-docker.pkg.dev/bsalmon-gke-dev/test-repo/sweperf:sympy__sympy-19637": failed to resolve reference "us-central1-docker.pkg.dev/bsalmon-gke-dev/test-repo/sweperf:sympy__sympy-19637": failed to authorize: failed to fetch oauth token: unexpected status from GET request to https://us-central1-docker.pkg.dev/v2/token?scope=repository%3Absalmon-gke-dev%2Ftest-repo%2Fsweperf%3Apull&service=us-central1-docker.pkg.dev: 403 Forbidden
+  Warning  Failed     11s (x4 over 108s)  kubelet            spec.containers{test-pull-sympy-2}: Error: ErrImagePull
