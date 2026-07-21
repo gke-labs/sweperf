@@ -13,7 +13,7 @@ usage() {
     echo "                                                                    Generates, pushes, and prepulls SWE-bench images"
     echo "  prepull-images                                                    Prepulls SWE-bench images from generated_images.txt"
     echo "  run-benchmark <DURATION_SECONDS> <CONCURRENCY>                    Runs the benchmark and collects metrics"
-    echo "  run-universal <DURATION> <CONCURRENCY> [CACHE]                    Runs the universal benchmarking pod"
+    echo "  run-universal <DURATION> <CONCURRENCY> [PYPI_CACHE] [APT_CACHE]   Runs the universal benchmarking pod"
     echo ""
     exit 1
 }
@@ -349,14 +349,15 @@ case "$COMMAND" in
 
     # Runs the main benchmark utilizing the universal runner pod template and submitter
     run-universal)
-        if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-            echo "Usage: $0 run-universal <DURATION_SECONDS> <CONCURRENCY> [PYPI_CACHE_URL]"
-            echo "Example: $0 run-universal 300 2 us-central1-python.pkg.dev/my-project/my-pypi-cache"
+        if [ "$#" -lt 2 ] || [ "$#" -gt 4 ]; then
+            echo "Usage: $0 run-universal <DURATION_SECONDS> <CONCURRENCY> [PYPI_CACHE_URL] [APT_CACHE_URL]"
+            echo "Example: $0 run-universal 300 2 us-central1-python.pkg.dev/my-project/my-pypi-cache us-central1-apt.pkg.dev/my-project/my-apt-cache"
             exit 1
         fi
         DURATION=$1
         CONCURRENCY=$2
         PYPI_CACHE_URL=$3
+        APT_CACHE_URL=$4
 
         rm -f node_metrics.txt pods.json pod_metrics.txt
         echo "Starting heavily-aligned node metrics watcher..."
@@ -368,7 +369,7 @@ case "$COMMAND" in
         COLLECTOR_PID=$!
 
         echo "Starting universal submitter ($DURATION seconds, $CONCURRENCY pods)..."
-        ./benchmark/submitter_universal.sh benchmark/pod_template_universal.yaml $CONCURRENCY $DURATION generated_instances.txt false "$PYPI_CACHE_URL"
+        ./benchmark/submitter_universal.sh benchmark/pod_template_universal.yaml $CONCURRENCY $DURATION generated_instances.txt false "$PYPI_CACHE_URL" "$APT_CACHE_URL"
         
         echo "Submitter finished. Stopping monitors..."
         kill $NODE_METRICS_PID 2>/dev/null || true

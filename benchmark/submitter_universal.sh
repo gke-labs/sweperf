@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-if [ "$#" -lt 4 ] || [ "$#" -gt 6 ]; then
-    echo "Usage: $0 <pod_template.yaml> <concurrency> <duration_seconds> <images_file> [DO_GIT_PULL] [PYPI_CACHE_URL]"
+if [ "$#" -lt 4 ] || [ "$#" -gt 7 ]; then
+    echo "Usage: $0 <pod_template.yaml> <concurrency> <duration_seconds> <images_file> [DO_GIT_PULL] [PYPI_CACHE_URL] [APT_CACHE_URL]"
     exit 1
 fi
 
@@ -12,6 +12,7 @@ DURATION=$3
 INSTANCES_FILE=$4
 DO_GIT_PULL=${5:-false}
 PYPI_CACHE_URL=$6
+APT_CACHE_URL=$7
 
 if [ ! -f "$TEMPLATE" ]; then
     echo "Error: Template file $TEMPLATE not found."
@@ -79,7 +80,13 @@ while [ $(date +%s) -lt $END_TIME ]; do
                 pip_template=""
             fi
             
-            sed -e "s|{{IMAGE}}|$UNIVERSAL_IMAGE|g" -e "s|{{INSTANCE_ID}}|$instance|g" -e "s|{{NAME}}|$pod_name|g" -e "s|{{DO_GIT_PULL}}|$DO_GIT_PULL|g" -e "s|{{PIP_INDEX_URL_TEMPLATE}}|$pip_template|g" -e "s|{{PIP_TRUSTED_HOST}}|$trusted_host|g" "$TEMPLATE" >> "$batch_yaml"
+            if [ -n "$APT_CACHE_URL" ]; then
+                apt_template="deb https://oauth2accesstoken:{TOKEN}@${APT_CACHE_URL} debian main"
+            else
+                apt_template=""
+            fi
+            
+            sed -e "s|{{IMAGE}}|$UNIVERSAL_IMAGE|g" -e "s|{{INSTANCE_ID}}|$instance|g" -e "s|{{NAME}}|$pod_name|g" -e "s|{{DO_GIT_PULL}}|$DO_GIT_PULL|g" -e "s|{{PIP_INDEX_URL_TEMPLATE}}|$pip_template|g" -e "s|{{PIP_TRUSTED_HOST}}|$trusted_host|g" -e "s|{{APT_PROXY_URL}}|$apt_template|g" "$TEMPLATE" >> "$batch_yaml"
             echo "---" >> "$batch_yaml"
             
             count=$((count + 1))

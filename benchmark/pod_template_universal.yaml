@@ -30,3 +30,5 @@ spec:
       value: "{{PIP_INDEX_URL_TEMPLATE}}"
     - name: PIP_TRUSTED_HOST
       value: "{{PIP_TRUSTED_HOST}}"
+    - name: APT_PROXY_URL
+      value: "{{APT_PROXY_URL}}"
