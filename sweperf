@@ -42,7 +42,7 @@ case "$COMMAND" in
             --machine-type="c4-highmem-16" \
             --disk-size="1000GB" \
             --disk-type="hyperdisk-balanced" \
-            --num-nodes=5 \
+            --num-nodes=3 \
             --default-max-pods-per-node=256 \
             --enable-ip-alias \
             --scopes="gke-default,storage-rw" || echo "Cluster may already exist."
