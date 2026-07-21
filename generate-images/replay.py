@@ -82,6 +82,13 @@ def main():
     child.sendline(f"PS1='{unique_prompt}'")
     child.expect(unique_prompt)
     
+    # Activate Conda testbed
+    child.sendline('source /home/swe-bench/miniconda3/etc/profile.d/conda.sh || true')
+    child.expect(unique_prompt)
+    child.sendline('conda activate testbed || true')
+    child.expect(unique_prompt)
+
+    
     # Clear anything left in the buffer
     _ = child.before
     

@@ -8,6 +8,92 @@ import time
 import concurrent.futures
 
 
+
+def gen_setup_script(instance_id, repo, base_commit, env_commit, python_version, pre_install, install, pip_packages, reqs_paths):
+    cmds = ["#!/bin/bash", "set -e", "source /home/swe-bench/miniconda3/etc/profile.d/conda.sh || true"]
+    cmds.append(f"git clone https://github.com/{repo} /testbed")
+    cmds.append("cd /testbed")
+    if env_commit and str(env_commit) != "None" and env_commit != base_commit:
+        cmds.append(f"git checkout {env_commit}")
+    else:
+        cmds.append(f"git checkout {base_commit}")
+    cmds.append(f"conda tos accept || true && conda create -n testbed python={python_version} -y")
+
+    cmds.append("conda activate testbed")
+    if pre_install:
+        if isinstance(pre_install, list):
+            cmds.extend(pre_install)
+        else:
+            cmds.append(pre_install)
+
+    if reqs_paths:
+        for idx in range(len(reqs_paths)):
+            cmds.append(f'''
+if [ -f "{reqs_paths[idx]}" ]; then
+    python -m pip install -r {reqs_paths[idx]}
+fi
+            '''.strip())
+
+    if pip_packages:
+        if isinstance(pip_packages, list):
+            cmds.append(f"python -m pip install {' '.join(pip_packages)}")
+        else:
+            cmds.append(f"python -m pip install {pip_packages}")
+
+    if install:
+        if isinstance(install, list):
+            cmds.extend(install)
+        else:
+            cmds.append(install)
+    if env_commit and str(env_commit) != "None" and env_commit != base_commit:
+        cmds.append(f"git checkout {base_commit}")
+    return "\n".join(cmds) + "\n"
+
+def process_universal_instance(instance_id, url_or_path, dataset_indexed, swe_metadata):
+    import urllib.request
+    print(f"\nProcessing {instance_id} for universal runner...")
+    try:
+        if url_or_path.startswith("http://") or url_or_path.startswith("https://"):
+            req = urllib.request.Request(url_or_path)
+            if "GITHUB_TOKEN" in os.environ:
+                req.add_header("Authorization", f"token {os.environ['GITHUB_TOKEN']}")
+            with urllib.request.urlopen(req) as response:
+                traj_data = json.loads(response.read().decode())
+        else:
+            with open(url_or_path, "r") as f:
+                traj_data = json.load(f)
+    except Exception as e:
+        print(f"  Failed: {e}")
+        return False
+        
+    commands = extract_commands(traj_data)
+    trace_filename = f"traces/{instance_id}_trace.json"
+    with open(trace_filename, "w") as f:
+        json.dump(commands, f, indent=2)
+        
+    if instance_id not in dataset_indexed:
+        print(f"Warning: {instance_id} not found in dataset!")
+        return False
+        
+    row = dataset_indexed[instance_id]
+    repo = row['repo']
+    version = row['version']
+    
+    spec = swe_metadata['specs'].get(repo, {}).get(version, {})
+    
+    python_ver = spec.get('python', "3.10")
+        
+    script = gen_setup_script(
+        instance_id, repo, row['base_commit'], row['environment_setup_commit'],
+        python_ver, spec.get('pre_install'), spec.get('install'),
+        spec.get('pip_packages'), swe_metadata['reqs_paths'].get(repo)
+    )
+    
+    with open(f"setups/setup_{instance_id}.sh", "w") as f:
+        f.write(script)
+    os.chmod(f"setups/setup_{instance_id}.sh", 0o755)
+    return True
+
 def get_github_tree():
     """Fetch the full tree of swe-bench/experiments main branch."""
     url = "https://api.github.com/repos/swe-bench/experiments/git/trees/main?recursive=1"
@@ -144,9 +230,11 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
     if build:
         tag_name = f"{image_prefix.rstrip('/')}:{instance_id}" if image_prefix else f"sweperf:{instance_id}"
         print(f"Building Docker image {tag_name}...")
-        cmd = ["docker", "build", "-t", tag_name, "-f", dockerfile_name, "."]
+        cmd = ["docker", "build", "--no-cache", "--rm", "--force-rm", "-t", tag_name, "-f", dockerfile_name, "."]
         try:
-            subprocess.run(cmd, check=True)
+            env = os.environ.copy()
+            env["DOCKER_BUILDKIT"] = "0" # Disable BuildKit to prevent it from pinning base images in cache
+            subprocess.run(cmd, env=env, check=True)
             print(f"Successfully built {tag_name}")
         except subprocess.CalledProcessError as e:
             print(f"Failed to build {tag_name}: {e}")
@@ -161,15 +249,15 @@ ENTRYPOINT ["python3", "/replay.py", "/trace.json"]
                 print(f"Failed to push {tag_name}: {e}")
                 return False
 
-        print(f"Cleaning up local image {tag_name} to save disk space...")
-        subprocess.run(["docker", "rmi", tag_name], check=False)
-        print(f"Cleaning up base image {base_image} to save disk space...")
-        subprocess.run(["docker", "rmi", base_image], check=False)
-            
-    if os.path.exists(trace_filename):
-        os.remove(trace_filename)
-    if os.path.exists(dockerfile_name):
-        os.remove(dockerfile_name)
+        print(f"Cleaning up {tag_name} and base images to save disk space...")
+        subprocess.run(["docker", "rmi", "-f", tag_name], check=False)
+        subprocess.run(["docker", "rmi", "-f", base_image], check=False)
+        subprocess.run(["docker", "image", "prune", "-f"], check=False)
+        
+    # if os.path.exists(trace_filename):
+    #     os.remove(trace_filename)
+    # if os.path.exists(dockerfile_name):
+    #     os.remove(dockerfile_name)
         
     return True
 
@@ -182,6 +270,7 @@ def main():
     parser.add_argument("--push", action="store_true", help="Push the built images to a remote registry (requires --build)")
     parser.add_argument("--image-prefix", type=str, default="", help="Prefix for the docker image tag (e.g. 'us-central1-docker.pkg.dev/my-project/repo/')")
     parser.add_argument("--test", action="store_true", help="Run in test mode using local test_trace.json")
+    parser.add_argument("--universal", action="store_true", help="Generate single universal base image")
     parser.add_argument("--local-trajs-dir", type=str, help="Path to local trajs directory (bypasses GitHub download)")
     parser.add_argument("--output-list", type=str, help="File to write the list of successfully built/pushed image tags to")
     parser.add_argument("--output-yaml", type=str, help="Output YAML file for CL2 template overrides")
@@ -216,6 +305,32 @@ def main():
             print(f"Successfully built {image_tag}")
             print(f"\nTo test it, run: docker run -it --rm {image_tag}")
         sys.exit(0)
+
+
+    if args.universal:
+        print("Running in universal mode...")
+        os.makedirs("setups", exist_ok=True)
+        os.makedirs("traces", exist_ok=True)
+        with open("generated_instances.txt", "w") as f:
+            pass
+        from datasets import load_dataset
+        ds = load_dataset('princeton-nlp/SWE-bench_Verified', split='test')
+        dataset_indexed = {r['instance_id']: r for r in ds}
+        
+        try:
+            from swebench.harness.constants.python import (
+                MAP_REPO_VERSION_TO_SPECS_PY,
+                MAP_REPO_TO_REQS_PATHS,
+                MAP_REPO_TO_ENV_YML_PATHS
+            )
+            swe_metadata = {
+                'specs': MAP_REPO_VERSION_TO_SPECS_PY,
+                'reqs_paths': MAP_REPO_TO_REQS_PATHS,
+                'env_yml_paths': MAP_REPO_TO_ENV_YML_PATHS
+            }
+        except ImportError as e:
+            print(f"Warning: Failed to import swebench specs: {e}")
+            swe_metadata = {'specs': {}, 'reqs_paths': {}, 'env_yml_paths': {}}
 
     traj_files = []
     
@@ -283,10 +398,16 @@ def main():
 
     print(f"Starting parallel processing with {args.workers} workers...")
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as executor:
-        future_to_instance = {
-            executor.submit(process_instance, instance_id, url, build=args.build, push=args.push, image_prefix=args.image_prefix): instance_id
-            for instance_id, url in traj_files
-        }
+        if args.universal:
+            future_to_instance = {
+                executor.submit(process_universal_instance, instance_id, url, dataset_indexed, swe_metadata): instance_id
+                for instance_id, url in traj_files
+            }
+        else:
+            future_to_instance = {
+                executor.submit(process_instance, instance_id, url, build=args.build, push=args.push, image_prefix=args.image_prefix): instance_id
+                for instance_id, url in traj_files
+            }
         
         for future in concurrent.futures.as_completed(future_to_instance):
             instance_id = future_to_instance[future]
@@ -294,9 +415,26 @@ def main():
                 if future.result():
                     success_count += 1
                     successful_tags.append(f"{args.image_prefix.rstrip('/')}:{instance_id}" if args.image_prefix else f"sweperf:{instance_id}")
+                    if args.universal:
+                        with open('generated_instances.txt', 'a') as gf:
+                            gf.write(instance_id + '\n')
             except Exception as e:
                 print(f"Error processing {instance_id}: {e}")
             
+
+    if args.universal:
+        print("Traces and setups generated. Building generic Universal Image...")
+        dockerfile = """FROM sweb.base.x86_64:latest
+USER root
+RUN apt-get update && apt-get install -y python3-pexpect || pip install pexpect
+COPY setups/ /setups/
+COPY traces/ /traces/
+COPY generate-images/replay.py /replay.py
+ENTRYPOINT ["/bin/bash", "-c", "(/setups/setup_${INSTANCE_ID}.sh && chown -R swe-bench:swe-bench /testbed /home/swe-bench/miniconda3 && cd /testbed && su swe-bench -c \\"python3 /replay.py /traces/${INSTANCE_ID}_trace.json\\") || (echo 'Task failed, sleeping for debug' && sleep 3600)"]
+"""
+        with open("universal.Dockerfile", "w") as f:
+            f.write(dockerfile)
+
     if args.output_list and successful_tags:
         with open(args.output_list, "w") as f:
             for tag in successful_tags:
