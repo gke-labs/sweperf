@@ -425,11 +425,12 @@ def main():
     if args.universal:
         print("Traces and setups generated. Building generic Universal Image...")
         dockerfile = """FROM sweb.base.x86_64:latest
+USER root
 RUN apt-get update && apt-get install -y python3-pexpect || pip install pexpect
 COPY setups/ /setups/
 COPY traces/ /traces/
 COPY generate-images/replay.py /replay.py
-ENTRYPOINT ["/bin/bash", "-c", "(/setups/setup_${INSTANCE_ID}.sh && cd /testbed && python3 /replay.py /traces/${INSTANCE_ID}_trace.json) || (echo 'Task failed, sleeping for debug' && sleep 3600)"]
+ENTRYPOINT ["/bin/bash", "-c", "(/setups/setup_${INSTANCE_ID}.sh && chown -R swe-bench:swe-bench /testbed /home/swe-bench/miniconda3 && cd /testbed && su swe-bench -c \\"python3 /replay.py /traces/${INSTANCE_ID}_trace.json\\") || (echo 'Task failed, sleeping for debug' && sleep 3600)"]
 """
         with open("universal.Dockerfile", "w") as f:
             f.write(dockerfile)

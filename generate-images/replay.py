@@ -104,7 +104,7 @@ def main():
             # Synthesize LLM latency timing based on log-normal distribution
             # Derived from analyzing Antigravity LLM interaction logs across 23 real-world complex coding tasks.
             # Median: 6.00s, P90: 12.00s, Avg: 15.65s, Max: 169s
-            mu = float(os.environ.get("LLM_LATENCY_MU", "-5.0"))
+            mu = float(os.environ.get("LLM_LATENCY_MU", "2.0414"))
             sigma = float(os.environ.get("LLM_LATENCY_SIGMA", "0.8674"))
             min_latency = float(os.environ.get("LLM_LATENCY_MIN", "0.5"))
             sleep_time = max(min_latency, random.lognormvariate(mu, sigma))
