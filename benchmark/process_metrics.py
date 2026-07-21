@@ -70,6 +70,7 @@ def parse_job_metrics(file_path):
         'failed': 0,
         'oom_killed': 0,
         'other_errors': 0,
+        'by_job_type': collections.defaultdict(lambda: {'succeeded': 0, 'failed': 0, 'lengths': []})
     }
     try:
         with open(file_path, 'r') as f:
@@ -84,6 +85,21 @@ def parse_job_metrics(file_path):
                         creation_time = datetime.strptime(creation_time_str, "%Y-%m-%dT%H:%M:%SZ")
                     except ValueError:
                         pass
+
+                job_type = "unknown"
+                containers = item.get('spec', {}).get('containers', [])
+                if containers:
+                    c = containers[0]
+                    for env in c.get('env', []):
+                        if env.get('name') == 'INSTANCE_ID':
+                            job_type = env.get('value')
+                            break
+                    if job_type == "unknown":
+                        image = c.get('image', '')
+                        if ':' in image:
+                            job_type = image.split(':')[-1]
+                # Fallback purely to repo prefix if it's long
+                job_group = job_type.split("__")[0] if "__" in job_type else job_type
 
                 status = item.get('status', {})
                 start_time_str = status.get('startTime')
@@ -120,13 +136,16 @@ def parse_job_metrics(file_path):
                     job_len = (finished_at - start_time).total_seconds()
                     if job_len >= 0:
                         metrics['lengths'].append(job_len)
+                        metrics['by_job_type'][job_group]['lengths'].append(job_len)
                     if not metrics['latest_end'] or finished_at > metrics['latest_end']:
                         metrics['latest_end'] = finished_at
                         
                     if exit_code == 0:
                         metrics['succeeded'] += 1
+                        metrics['by_job_type'][job_group]['succeeded'] += 1
                     else:
                         metrics['failed'] += 1
+                        metrics['by_job_type'][job_group]['failed'] += 1
                         if reason == 'OOMKilled':
                             metrics['oom_killed'] += 1
                         else:
@@ -166,6 +185,24 @@ def process_job_metrics(metrics):
             total_duration = (latest_end - earliest_start).total_seconds()
             throughput_min = (len(lengths) / total_duration) * 60
             report.append(f"- **Throughput:**     {throughput_min:.2f} jobs/minute")
+            
+        by_type = metrics.get('by_job_type', {})
+        if by_type:
+            report.append("")
+            report.append("#### Job Statistics by Repository Group")
+            report.append("")
+            report.append("| Repository / Job Type | Total | Succeeded | Failed | Avg Time (s) | Max Time (s) |")
+            report.append("|---|---|---|---|---|---|")
+            for t_name, t_metrics in sorted(by_type.items()):
+                t_total = len(t_metrics['lengths']) + (t_metrics['succeeded'] + t_metrics['failed'] - len(t_metrics['lengths']))
+                # Recalculate true total if we didn't get lengths for some reason (e.g. timeout eviction)
+                t_total = max(t_total, t_metrics['succeeded'] + t_metrics['failed'])
+                if t_total == 0:
+                    continue
+                t_avg = sum(t_metrics['lengths']) / max(1, len(t_metrics['lengths']))
+                t_max = max(t_metrics['lengths']) if t_metrics['lengths'] else 0
+                report.append(f"| `{t_name}` | {t_total} | {t_metrics['succeeded']} | {t_metrics['failed']} | {t_avg:.1f} | {t_max:.1f} |")
+            report.append("")
             
     if metrics['pending_times']:
         pending_sorted = sorted(metrics['pending_times'])
