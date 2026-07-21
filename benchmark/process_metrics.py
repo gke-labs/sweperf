@@ -70,6 +70,7 @@ def parse_job_metrics(file_path):
         'failed': 0,
         'oom_killed': 0,
         'other_errors': 0,
+        'by_job_group': collections.defaultdict(lambda: {'succeeded': 0, 'failed': 0, 'lengths': []}),
         'by_job_type': collections.defaultdict(lambda: {'succeeded': 0, 'failed': 0, 'lengths': []})
     }
     try:
@@ -136,16 +137,19 @@ def parse_job_metrics(file_path):
                     job_len = (finished_at - start_time).total_seconds()
                     if job_len >= 0:
                         metrics['lengths'].append(job_len)
-                        metrics['by_job_type'][job_group]['lengths'].append(job_len)
+                        metrics['by_job_group'][job_group]['lengths'].append(job_len)
+                        metrics['by_job_type'][job_type]['lengths'].append(job_len)
                     if not metrics['latest_end'] or finished_at > metrics['latest_end']:
                         metrics['latest_end'] = finished_at
                         
                     if exit_code == 0:
                         metrics['succeeded'] += 1
-                        metrics['by_job_type'][job_group]['succeeded'] += 1
+                        metrics['by_job_group'][job_group]['succeeded'] += 1
+                        metrics['by_job_type'][job_type]['succeeded'] += 1
                     else:
                         metrics['failed'] += 1
-                        metrics['by_job_type'][job_group]['failed'] += 1
+                        metrics['by_job_group'][job_group]['failed'] += 1
+                        metrics['by_job_type'][job_type]['failed'] += 1
                         if reason == 'OOMKilled':
                             metrics['oom_killed'] += 1
                         else:
@@ -186,16 +190,32 @@ def process_job_metrics(metrics):
             throughput_min = (len(lengths) / total_duration) * 60
             report.append(f"- **Throughput:**     {throughput_min:.2f} jobs/minute")
             
-        by_type = metrics.get('by_job_type', {})
-        if by_type:
+        by_group = metrics.get('by_job_group', {})
+        if by_group:
             report.append("")
             report.append("#### Job Statistics by Repository Group")
             report.append("")
-            report.append("| Repository / Job Type | Total | Succeeded | Failed | Avg Time (s) | Max Time (s) |")
+            report.append("| Repository Group | Total | Succeeded | Failed | Avg Time (s) | Max Time (s) |")
+            report.append("|---|---|---|---|---|---|")
+            for t_name, t_metrics in sorted(by_group.items()):
+                t_total = len(t_metrics['lengths']) + (t_metrics['succeeded'] + t_metrics['failed'] - len(t_metrics['lengths']))
+                t_total = max(t_total, t_metrics['succeeded'] + t_metrics['failed'])
+                if t_total == 0:
+                    continue
+                t_avg = sum(t_metrics['lengths']) / max(1, len(t_metrics['lengths']))
+                t_max = max(t_metrics['lengths']) if t_metrics['lengths'] else 0
+                report.append(f"| `{t_name}` | {t_total} | {t_metrics['succeeded']} | {t_metrics['failed']} | {t_avg:.1f} | {t_max:.1f} |")
+            report.append("")
+            
+        by_type = metrics.get('by_job_type', {})
+        if by_type:
+            report.append("")
+            report.append("#### Job Statistics by Specific Test Case")
+            report.append("")
+            report.append("| Test Case (Instance ID) | Total | Succeeded | Failed | Avg Time (s) | Max Time (s) |")
             report.append("|---|---|---|---|---|---|")
             for t_name, t_metrics in sorted(by_type.items()):
                 t_total = len(t_metrics['lengths']) + (t_metrics['succeeded'] + t_metrics['failed'] - len(t_metrics['lengths']))
-                # Recalculate true total if we didn't get lengths for some reason (e.g. timeout eviction)
                 t_total = max(t_total, t_metrics['succeeded'] + t_metrics['failed'])
                 if t_total == 0:
                     continue
