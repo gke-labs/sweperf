@@ -11,8 +11,8 @@ import concurrent.futures
 
 def gen_setup_script(instance_id, repo, base_commit, env_commit, python_version, pre_install, install, pip_packages, reqs_paths):
     cmds = ["#!/bin/bash", "set -e", "source /home/swe-bench/miniconda3/etc/profile.d/conda.sh || true"]
-    cmds.append(f"git clone https://github.com/{repo} /home/swe-bench/testbed")
-    cmds.append("cd /home/swe-bench/testbed")
+    cmds.append(f"git clone https://github.com/{repo} /testbed")
+    cmds.append("cd /testbed")
     if env_commit and str(env_commit) != "None" and env_commit != base_commit:
         cmds.append(f"git checkout {env_commit}")
     else:
@@ -429,7 +429,7 @@ RUN apt-get update && apt-get install -y python3-pexpect || pip install pexpect
 COPY setups/ /setups/
 COPY traces/ /traces/
 COPY generate-images/replay.py /replay.py
-ENTRYPOINT ["/bin/bash", "-c", "(/setups/setup_${INSTANCE_ID}.sh && cd /home/swe-bench/testbed && python3 /replay.py /traces/${INSTANCE_ID}_trace.json) || (echo 'Task failed, sleeping for debug' && sleep 3600)"]
+ENTRYPOINT ["/bin/bash", "-c", "(/setups/setup_${INSTANCE_ID}.sh && cd /testbed && python3 /replay.py /traces/${INSTANCE_ID}_trace.json) || (echo 'Task failed, sleeping for debug' && sleep 3600)"]
 """
         with open("universal.Dockerfile", "w") as f:
             f.write(dockerfile)
