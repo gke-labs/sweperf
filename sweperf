@@ -236,6 +236,79 @@ case "$COMMAND" in
         cat report.md
         ;;
 
+    # Builds the generic SWE-bench root base image
+    build-sweb-base)
+        echo "=== Building raw SWE-bench base image ==="
+        if [ ! -d "/tmp/SWE-bench" ]; then
+            git clone https://github.com/aorwall/SWE-bench-docker.git /tmp/SWE-bench
+        fi
+        docker build -t sweb.base.x86_64:latest -f /tmp/SWE-bench/docker/Dockerfile /tmp/SWE-bench
+        echo "=== Done! Base image built. ==="
+        ;;
+
+    # Iterates over 500 tasks, extracts trace payloads, builds setup bash scripts, and builds one single Universal Docker image
+    generate-universal)
+        echo "=== Generating Universal Runner Image ==="
+        IMAGE_PREFIX=""
+        while [[ "$#" -gt 0 ]]; do
+            case $1 in
+                --image-prefix) IMAGE_PREFIX="$2"; shift ;;
+                *) echo "Unknown parameter passed: $1"; exit 1 ;;
+            esac
+            shift
+        done
+
+        VENV_DIR="$(dirname "$0")/.venv"
+        if [ ! -d "$VENV_DIR" ]; then
+            echo "Creating virtual environment..."
+            python3 -m venv "$VENV_DIR"
+        fi
+        source "$VENV_DIR/bin/activate"
+        pip install --index-url https://pypi.org/simple -r "$(dirname "$0")/generate-images/requirements.txt" datasets
+        pip install --index-url https://pypi.org/simple swebench
+
+        python3 "$(dirname "$0")/generate-images/generate.py" --universal --build --image-prefix "$IMAGE_PREFIX"
+        docker build -t sweperf:universal -f universal.Dockerfile .
+        echo "=== Done! Universal image built. ==="
+        ;;
+
+    # Runs the main benchmark utilizing the universal runner pod template and submitter
+    run-universal)
+        if [ "$#" -ne 2 ]; then
+            echo "Usage: $0 run-universal <DURATION_SECONDS> <CONCURRENCY>"
+            exit 1
+        fi
+        DURATION=$1
+        CONCURRENCY=$2
+
+        rm -f node_metrics.txt pods.json pod_metrics.txt
+        echo "Starting heavily-aligned node metrics watcher..."
+        python3 benchmark/node_watcher.py $DURATION &
+        NODE_METRICS_PID=$!
+
+        echo "Starting pod watcher..."
+        python3 benchmark/pod_watcher.py $DURATION &
+        POD_WATCHER_PID=$!
+
+        echo "Starting pod GC collector watcher..."
+        python3 benchmark/collector.py $DURATION &
+        COLLECTOR_PID=$!
+
+        echo "Starting universal submitter ($DURATION seconds, $CONCURRENCY pods)..."
+        ./benchmark/submitter_universal.sh benchmark/pod_template_universal.yaml $CONCURRENCY $DURATION generated_instances.txt
+        
+        echo "Submitter finished. Stopping monitors..."
+        kill $NODE_METRICS_PID 2>/dev/null || true
+        kill $POD_WATCHER_PID 2>/dev/null || true
+        kill $COLLECTOR_PID 2>/dev/null || true
+        wait
+
+        echo "Generating report..."
+        python3 benchmark/process_metrics.py > report.md
+        python3 benchmark/process_image_metrics.py >> report.md
+        cat report.md
+        ;;
+
     *)
         echo "Unknown command: $COMMAND"
         usage
