@@ -423,7 +423,7 @@ def main():
             
 
     if args.universal:
-        print("Traces and setups generated. Using checked-in Dockerfile.universal.")
+        print("Traces and setups generated. Using checked-in generate-images/Dockerfile.universal.")
 
     if args.output_list and successful_tags:
         with open(args.output_list, "w") as f:

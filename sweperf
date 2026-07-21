@@ -335,7 +335,7 @@ case "$COMMAND" in
             fi
         fi
 
-        docker build -t sweperf:universal -f Dockerfile.universal .
+        docker build -t sweperf:universal -f generate-images/Dockerfile.universal .
         
         if [ -n "$IMAGE_PREFIX" ]; then
             FINAL_IMAGE="${IMAGE_PREFIX}sweperf:universal"
