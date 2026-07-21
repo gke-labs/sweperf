@@ -1,0 +1,9 @@
+FROM sweb.base.x86_64:latest
+USER root
+RUN apt-get update && apt-get install -y python3-pexpect || pip install pexpect
+COPY setups/ /setups/
+COPY traces/ /traces/
+COPY generate-images/replay.py /replay.py
+COPY generate-images/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]

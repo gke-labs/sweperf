@@ -423,19 +423,7 @@ def main():
             
 
     if args.universal:
-        print("Traces and setups generated. Building generic Universal Image...")
-        dockerfile = """FROM sweb.base.x86_64:latest
-USER root
-RUN apt-get update && apt-get install -y python3-pexpect || pip install pexpect
-COPY setups/ /setups/
-COPY traces/ /traces/
-COPY generate-images/replay.py /replay.py
-COPY generate-images/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-ENTRYPOINT ["/entrypoint.sh"]
-"""
-        with open("Dockerfile.universal", "w") as f:
-            f.write(dockerfile)
+        print("Traces and setups generated. Using checked-in Dockerfile.universal.")
 
     if args.output_list and successful_tags:
         with open(args.output_list, "w") as f:
