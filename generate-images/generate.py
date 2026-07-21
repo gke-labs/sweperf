@@ -17,7 +17,7 @@ def gen_setup_script(instance_id, repo, base_commit, env_commit, python_version,
         cmds.append(f"git checkout {env_commit}")
     else:
         cmds.append(f"git checkout {base_commit}")
-    cmds.append(f"conda create -n testbed python={python_version} -y")
+    cmds.append(f"conda tos accept || true && conda create -n testbed python={python_version} -y")
 
     cmds.append("conda activate testbed")
     if pre_install:
