@@ -18,9 +18,15 @@ spec:
         cpu: "10m"
         memory: "10Mi"
     env:
+    - name: USE_GCP_CACHE
+      value: "1"
     - name: INSTANCE_ID
       value: "{{INSTANCE_ID}}"
     - name: PAGER
       value: "cat"
     - name: GIT_PAGER
       value: "cat"
+    - name: PIP_INDEX_URL_TEMPLATE
+      value: "{{PIP_INDEX_URL_TEMPLATE}}"
+    - name: PIP_TRUSTED_HOST
+      value: "{{PIP_TRUSTED_HOST}}"

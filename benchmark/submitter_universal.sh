@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
-    echo "Usage: $0 <pod_template.yaml> <concurrency> <duration_seconds> <images_file> [DO_GIT_PULL]"
+if [ "$#" -lt 4 ] || [ "$#" -gt 6 ]; then
+    echo "Usage: $0 <pod_template.yaml> <concurrency> <duration_seconds> <images_file> [DO_GIT_PULL] [PYPI_CACHE_URL]"
     exit 1
 fi
 
@@ -11,6 +11,7 @@ CONCURRENCY=$2
 DURATION=$3
 INSTANCES_FILE=$4
 DO_GIT_PULL=${5:-false}
+PYPI_CACHE_URL=$6
 
 if [ ! -f "$TEMPLATE" ]; then
     echo "Error: Template file $TEMPLATE not found."
@@ -57,6 +58,8 @@ while [ $(date +%s) -lt $END_TIME ]; do
         batch_yaml=$(mktemp)
         count=0
         
+        # Tokens are generated autonomously by the pod's entrypoint script using USE_GCP_CACHE
+        
         for (( i=0; i<to_launch; i++ )); do
             if [ $(date +%s) -ge $END_TIME ]; then
                 break 2
@@ -65,10 +68,18 @@ while [ $(date +%s) -lt $END_TIME ]; do
             # Select a random SWE-bench instance for this pod
             rand_idx=$(( RANDOM % NUM_INSTANCES ))
             instance="${INSTANCES[$rand_idx]}"
-            UNIVERSAL_IMAGE="${UNIVERSAL_IMAGE:-sweperf:universal}"
+            UNIVERSAL_IMAGE="${UNIVERSAL_IMAGE:-us-central1-docker.pkg.dev/bsalmon-gke-dev/swebench-docker/sweperf:universal}"
             pod_name="${POD_PREFIX}${idx}-$RANDOM"
             
-            sed -e "s|{{IMAGE}}|$UNIVERSAL_IMAGE|g" -e "s|{{INSTANCE_ID}}|$instance|g" -e "s|{{NAME}}|$pod_name|g" -e "s|{{DO_GIT_PULL}}|$DO_GIT_PULL|g" "$TEMPLATE" >> "$batch_yaml"
+            if [ -n "$PYPI_CACHE_URL" ]; then
+                trusted_host=$(echo "$PYPI_CACHE_URL" | cut -d/ -f1)
+                pip_template="https://oauth2accesstoken:{TOKEN}@${PYPI_CACHE_URL}/simple/"
+            else
+                trusted_host=""
+                pip_template=""
+            fi
+            
+            sed -e "s|{{IMAGE}}|$UNIVERSAL_IMAGE|g" -e "s|{{INSTANCE_ID}}|$instance|g" -e "s|{{NAME}}|$pod_name|g" -e "s|{{DO_GIT_PULL}}|$DO_GIT_PULL|g" -e "s|{{PIP_INDEX_URL_TEMPLATE}}|$pip_template|g" -e "s|{{PIP_TRUSTED_HOST}}|$trusted_host|g" "$TEMPLATE" >> "$batch_yaml"
             echo "---" >> "$batch_yaml"
             
             count=$((count + 1))
