@@ -19,7 +19,7 @@ Instead of hitting an OpenAI or Gemini API, the containers use an embedded **Log
 3. Synthesizes realistic LLM latency (think time) between commands using a log-normal distribution derived from real-world agent trajectories (averaging ~15.6s).
 
 **The On-Demand Runner**
-SWE-perf has evolved from creating 500+ separate images (one for each SWE-bench task) into an **On-Demand Runner**. The On-Demand image (`sweperf:universal`) is a single, unified Docker image. When an On-Demand Pod starts, it dynamically uses pre-extracted setup scripts to fetch dependencies, builds the SWE-bench environment for the specific task at runtime, and executes the simulated trajectory.
+The **On-Demand Runner** (`sweperf:universal`) is a single, unified Docker image. When an On-Demand Pod starts, it dynamically uses pre-extracted setup scripts to fetch dependencies, builds the SWE-bench environment for the specific task at runtime, and executes the simulated trajectory.
 
 ---
 
@@ -53,7 +53,7 @@ With the cluster and caches set up, you can run realistic load tests.
 - **On-Demand Benchmark** simulates a normal agentic workload where the agent operates on arbitrary repositories on the fly (it does not know the repository or environment beforehand and must build it at runtime).
 - **Pre-baked Benchmark** simulates a Reinforcement Learning (RL) workload where the environment is thoroughly known, cached, and pre-baked (because an RL agent repeatedly interacts with the same known repository during training).
 
-### On-Demand Benchmark (Recommended)
+### On-Demand Benchmark
 
 The `run-universal` subcommand spins up a stateless submitter alongside a metrics collector. It queries the Kubernetes API and maintains a strict concurrent pod limit over a user-defined time window using the On-Demand Runner.
 
