@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+/usr/bin/python3 -c "import sys; sys.path.append('/'); import replay; replay.wait_for_signals()"
+
 if [ "${USE_GCP_CACHE}" == "1" ]; then
     echo "USE_GCP_CACHE=1 detected. Fetching metadata token..."
     TOKEN=$(curl -sSf --connect-timeout 2 -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/instance/service-accounts/default/token | python3 -c "import sys, json; print(json.load(sys.stdin)['access_token'])" || echo "")
@@ -17,14 +19,16 @@ if [ "${USE_GCP_CACHE}" == "1" ]; then
     fi
 fi
 
-python3 -c "import sys; sys.path.append('/'); import replay; replay.wait_for_signals()"
-
 echo "Running environment setup..."
 mkdir -p /testbed
 chown swe-bench:swe-bench /testbed
+
+# Patch the setup script to forcefully reset any files dirtied by pip install -e .
+sed -i 's/git checkout /git reset --hard \&\& git clean -fd \&\& git checkout /g' /setups/setup_${INSTANCE_ID}.sh
+
 if su swe-bench -c "export PIP_INDEX_URL='$PIP_INDEX_URL'; bash /setups/setup_${INSTANCE_ID}.sh"; then
     echo "Setup successful. Running evaluation replay as swe-bench user..."
-    su swe-bench -c "python3 /replay.py /traces/${INSTANCE_ID}_trace.json" || {
+    su swe-bench -c "/usr/bin/python3 /replay.py /traces/${INSTANCE_ID}_trace.json" || {
         echo 'Task failed during replay, sleeping for debug'
         sleep 3600
     }
