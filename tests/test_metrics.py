@@ -12,9 +12,9 @@ from process_metrics import parse_metrics, percentile, process_metrics, parse_jo
 class TestMetrics(unittest.TestCase):
     def test_parse_metrics(self):
         lines = [
-            "node-1 100m 2% 1024Mi 10%",
-            "node-1 200m 4% 2Gi 20%",
-            "node-2 500m 10% 500Mi 5%"
+            "2023-10-10T12:00:00Z node-1 100m 1024Mi 1",
+            "2023-10-10T12:00:10Z node-1 200m 2048Mi 2",
+            "2023-10-10T12:00:00Z node-2 500m 500Mi 1"
         ]
         data = parse_metrics(lines)
         self.assertEqual(data["node-1"]["cpu"], [100, 200])

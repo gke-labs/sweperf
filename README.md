@@ -1,23 +1,25 @@
 # SWE-perf
 
-SWE-perf provides a suite of standalone, pre-built Docker containers that emulate the behavior of autonomous coding agents (like SWE-agent or OpenHands). This suite allows teams to evaluate infrastructure performance under the heavy, bursty load of AI agents, without actually needing to run an expensive LLM in the loop.
+SWE-perf provides a suite of standalone Docker containers that emulate the behavior of autonomous coding agents (like SWE-agent or OpenHands). This suite allows teams to evaluate infrastructure performance under the heavy, bursty load of AI agents, without actually needing to run an expensive LLM in the loop.
 
 ## Table of Contents
 - [The Image Suite](#the-image-suite)
 - [Getting the Images](#-getting-the-images)
 - [Image Properties & Usage](#image-properties--usage)
-- [Building / Regenerating Images](#building--regenerating-images-advanced)
+- [Building / Regenerating Images (Advanced)](#building--regenerating-images-advanced)
 - [Cluster Infrastructure & Benchmarking](#optional-cluster-infrastructure--benchmarking)
 - [Testing](#testing)
 
 ## The Image Suite
 
-The core value of SWE-perf is the image suite itself. Each image replicates an autonomous agent interacting with a codebase during a specific SWE-bench task.
-
-Instead of hitting an OpenAI or Gemini API, the containers use an embedded **Log-Normal Replay Engine**. This engine:
+The core value of SWE-perf is the container suite itself. Instead of hitting an OpenAI or Gemini API, the containers use an embedded **Log-Normal Replay Engine**. This engine:
 1. Takes a pre-recorded agent trajectory (commands run during a SWE-bench task).
 2. Simulates character-by-character shell typing using `pexpect` against a bash session.
 3. Synthesizes realistic LLM latency (think time) between commands using a log-normal distribution derived from real-world agent trajectories (averaging ~15.6s).
+
+**Two Operation Modes:**
+- **On-Demand Runner (Singleton Image):** A single, unified Docker image (`sweperf:universal`). When it starts, it dynamically uses pre-extracted setup scripts to fetch dependencies and builds the SWE-bench environment for the specific task at runtime. This simulates a normal agentic workload where the agent operates on arbitrary repositories on the fly.
+- **Pre-baked Images:** A suite of 500+ separate images (one for each SWE-bench task). This simulates a Reinforcement Learning (RL) workload where the environment is thoroughly known, cached, and pre-baked (because an RL agent repeatedly interacts with the same known repository during training).
 
 These standalone containers can be deployed in any environment to simulate realistic AI agent workloads natively.
 
@@ -25,9 +27,9 @@ These standalone containers can be deployed in any environment to simulate reali
 
 ## 🚀 Getting the Images
 
-If you want to use the pre-built, production-ready SWE-perf image suite within your own Google Cloud projects, **you do not need to generate them yourself.** Instead, synchronize a copy of the official repository directly into your own Artifact Registry. 
+If you want to use the pre-built, production-ready SWE-perf image suite within your own Google Cloud projects, **you do not need to generate them yourself.** Instead, synchronize a copy of the official repository directly into your own Artifact Registry. This syncs over both the singleton On-Demand image and the Pre-baked suite.
 
-The most efficient way to achieve this is via a server-to-server copy using `gcrane` (a Google-maintained CLI for container registries). This bypasses downloading hundreds of gigabytes locally and takes only seconds to copy all 500+ images natively.
+The most efficient way to achieve this is via a server-to-server copy using `gcrane` (a Google-maintained CLI for container registries). This bypasses downloading hundreds of gigabytes locally and takes only seconds to copy all images natively.
 
 ```bash
 # 1. Authenticate to Google Cloud
@@ -45,7 +47,7 @@ gcloud auth configure-docker us-central1-docker.pkg.dev
 
 By explicitly copying the images into your own project and generating the local manifests, your GKE clusters and VMs gain native, frictionless access without having to navigate cross-project IAM restrictions or service account key sharing.
 
-Here is an example Pod spec using one of the newly copied images:
+Here is an example Pod spec using the singleton On-Demand image:
 
 ```yaml
 apiVersion: v1
@@ -55,8 +57,25 @@ metadata:
 spec:
   containers:
   - name: agent
-    # Replace with your project, repo, and the desired SWE-bench task ID
-    image: us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>/sweperf:django__django-10554
+    # Replace with your project and repo
+    image: us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>/sweperf:universal
+    env:
+    - name: USE_GCP_CACHE
+      value: "1"
+    - name: INSTANCE_ID
+      value: "astropy__astropy-14365"
+    - name: WAIT_FOR_CLAIM_FILE
+      value: "/etc/podinfo/labels"
+    volumeMounts:
+    - name: podinfo
+      mountPath: /etc/podinfo
+  volumes:
+  - name: podinfo
+    downwardAPI:
+      items:
+      - path: "labels"
+        fieldRef:
+          fieldPath: metadata.labels
   restartPolicy: Never
 ```
 
@@ -64,65 +83,29 @@ spec:
 
 ## Image Properties & Usage
 
-Once you have access to the images, you can deploy them directly. There are several useful dials baked into the container.
+Once you have access to the images, you can deploy them directly. There are several useful dials baked into the container, controlled via environment variables.
 
-### Modifying Agent Latency (Extreme Churn Testing)
+### Environment Variable Reference
 
-If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, or if you want to test different latency profiles, you can override the distribution parameters. The timing is parameterizable via environment variables when running the container (these are the defaults):
+**Agent Latency**
+If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, you can override the distribution parameters.
+- `LLM_LATENCY_MU`: (Default: `2.0414`). Set to a large negative number like `"-5"` to floor out the latency for extreme churn testing (e.g. constant 0.5s delay).
+- `LLM_LATENCY_SIGMA`: (Default: `0.8674`)
+- `LLM_LATENCY_MIN`: (Default: `0.5`)
 
-```yaml
-env:
-- name: LLM_LATENCY_MU
-  value: "2.0414"
-- name: LLM_LATENCY_SIGMA
-  value: "0.8674"
-- name: LLM_LATENCY_MIN
-  value: "0.5"
-```
+**Network & Sandbox Blocking**
+- `WAIT_FOR_CLAIM_FILE`: To use the generated images seamlessly with [Agent Sandbox's warm pools](https://github.com/kubernetes-sigs/agent-sandbox), set this to a file path containing downward API labels (e.g. `/etc/podinfo/labels`). The container will pause all execution (including repository setup) until it finds the `agents.x-k8s.io/sandbox-id` label inside that file.
+- `WAIT_FOR_START_PORT`: If you are not using Agent Sandbox but still want to deploy pods in a "warm" paused state, set this to a port number (e.g., `8080`). The container will stand up a simple TCP server and pause execution until it receives an HTTP GET `/start` request on that port.
 
-To floor out the latency for extreme churn testing (e.g. constant 0.5s delay), you can set `LLM_LATENCY_MU` to a large negative number like `"-5"`, or explicitly set `LLM_LATENCY_MIN` and a negative `LLM_LATENCY_MU`.
+**Caching & On-Demand Options (Universal Image Only)**
+When running the **On-Demand Universal Image** (e.g., downloading repositories and packages dynamically), these variables control how the system clones repositories and downloads pip dependencies.
+- `INSTANCE_ID`: **(Required for On-Demand)** The specific SWE-bench task name the container should evaluate (e.g., `astropy__astropy-14365`). This dictates the test files, the package commit, and the exact setup script run.
+- `DO_GIT_PULL`: (Default: `false`) Selects whether `git pull` updates the repository from upstream, depending on your container repository caching strategy.
+- `USE_GCP_CACHE`: (Default: `"0"`) If set to `"1"`, the pod entrypoint will securely ping the internal GCP metadata server to fetch an ephemeral OAuth token for Google Cloud Artifact Registry (used to authenticate a PyPI pull-through proxy).
+- `PIP_INDEX_URL_TEMPLATE`: A PyPI proxy URL string containing a `{TOKEN}` placeholder template (e.g., `https://oauth2accesstoken:{TOKEN}@us-central1-python.pkg.dev/my-project/my-repo/simple/`). This relies on `USE_GCP_CACHE` discovering a token and substituting it securely into the URL.
+- `PIP_TRUSTED_HOST`: Explicitly specifies the trusted private host, circumventing SSL certificate resolution if a private proxy isn't on a recognized root domain.
 
-### Wait for Claim (Agent Sandbox Integration)
-
-To use the generated images seamlessly with [Agent Sandbox's warm pools](https://github.com/kubernetes-sigs/agent-sandbox), the replay engine can be configured to block execution until the Pod is formally claimed and assigned to a user.
-
-Set the `WAIT_FOR_CLAIM_FILE` environment variable to a file path containing the downward API labels (e.g. `/etc/podinfo/labels`). The replay script will loop indefinitely until it finds the `agents.x-k8s.io/sandbox-id` label inside that file, which is the platform signal injected by Agent Sandbox upon a successful claim.
-
-Example for a pod spec:
-```yaml
-env:
-- name: WAIT_FOR_CLAIM_FILE
-  value: "/etc/podinfo/labels"
-volumeMounts:
-- name: podinfo
-  mountPath: /etc/podinfo
-volumes:
-- name: podinfo
-  downwardAPI:
-    items:
-    - path: "labels"
-      fieldRef:
-        fieldPath: metadata.labels
-```
-
----
-
-### Wait for Start Port (Network Blocking)
-
-If you are not using Agent Sandbox but still want to deploy pods in a "warm" paused state until explicitly triggered, you can use the `WAIT_FOR_START_PORT` mode. This is useful for load testing where you want to spin up 500 pods and have them all start running the agent trajectory simultaneously via a broadcast signal.
-
-Setting the `WAIT_FOR_START_PORT` environment variable to a port number will cause the container to stand up a simple TCP server and pause execution until it receives the string `start` (or an HTTP GET request to `/start`) on that port.
-
-Example for a pod spec:
-```yaml
-env:
-- name: WAIT_FOR_START_PORT
-  value: "8080"
-```
-To trigger the replay engine once the pod is running:
-```bash
-curl -X GET http://<pod-ip>:8080/start
-```
+*Note: For out-of-the-box cluster orchestration, we recommend using the `./sweperf create-caches` command to spin up Python pull-through proxies automatically, and passing its resulting URL linearly to `./sweperf run-universal 2 300 <URL>`. This instructs the submitter bash loop to automatically plumb all of the above options into the test pod environment variables.*
 
 ---
 
@@ -130,57 +113,73 @@ curl -X GET http://<pod-ip>:8080/start
 
 If you have made edits to the replay engine or script injector, you will need to re-generate the image suite from scratch.
 
-**Trajectory Source**  
-The image generator automatically downloads agent trajectories from the official [SWE-bench/experiments](https://github.com/swe-bench/experiments) repository. This repository hosts public traces of various LLMs and agents (like SWE-agent or OpenHands) attempting to solve SWE-bench issues. SWE-perf extracts the raw bash commands from these JSON traces and bakes them directly into the generated Docker images.
+### 1. Building the On-Demand Singleton Image
 
-To generate the SWE-bench docker images, push them to a registry, and optionally pre-pull them onto nodes:
+First, build the generic base environment (`sweb.base.x86_64:latest`):
+```bash
+./sweperf build-sweb-base
+```
+
+Then extract setup bash scripts, and build the single On-Demand Docker image (`sweperf:universal`):
+```bash
+./sweperf generate-universal [--image-prefix <PREFIX>]
+```
+
+### 2. Building Pre-baked Isolated Images (Per-Task)
+To generate the legacy 500+ Docker images, push them to a registry, and optionally pre-pull them onto nodes:
 
 ```bash
 ./sweperf generate-images --project <PROJECT_ID> --region <REGION> --repo <REPO_NAME> [--limit <LIMIT>] [--run <RUN_NAME>]
 ```
 
-**Options:**
-* `--project`: Your Google Cloud project ID.
-* `--region`: The Google Cloud region (e.g., `us-central1`).
-* `--repo`: The name of the Artifact Registry repository to push images to.
-* `--limit`: (Optional) The maximum number of images to generate (default: 0 for all).
-* `--run`: (Optional) The SWE-bench experiment run name to pull trajectories from.
-
-*Note: By default, it uses trajectories from `20251120_livesweagent_gemini-3-pro-preview`. You can specify a different run from the SWE-bench experiments repository using the `--run` flag.*
-*This utilizes the `generate-images/generate.py` script under the hood to build images with the injected replay engine and trajectory traces.*
-
 ---
 
 ## Optional: Cluster Infrastructure & Benchmarking
 
-While the generated images can be used anywhere, SWE-perf also includes scripts to provision a high-density GKE cluster and run structured load tests.
+While the generated images can be used anywhere, SWE-perf also includes scripts to provision a high-density GKE cluster, set up caches, and run structured load tests for both On-Demand and Pre-baked workloads.
 
 ### 1. Environment Setup
 
-Create a GKE cluster with a high-density footprint (`--default-max-pods-per-node=256`). This command will also automatically provision an Artifact Registry repository and synchronize the SWE-perf image suite into it:
+Create a GKE cluster with a high-density footprint (`--default-max-pods-per-node=256`). This command will also automatically provision an Artifact Registry repository and synchronize the SWE-perf image suite into it.
 
 ```bash
 ./sweperf create-cluster <PROJECT_ID> <REGION> <CLUSTER_NAME> <REPO_NAME>
 ```
 
-### 2. Pre-pull Test Images
+### 2. Artifact Registry Caches (Crucial for On-Demand Run)
 
-To avoid network throttling and excessive disk I/O when spinning up hundreds of pods simultaneously, cache the test images onto your nodes beforehand:
+Since the On-Demand Runner dynamically builds the environment for each task at runtime, it relies heavily on fetching dependencies (like `pip install`). To avoid getting rate-limited or bogged down by network latency during high-density tests, deploy a PyPI proxy cache:
+
+```bash
+./sweperf create-caches <PROJECT_ID> <REGION> <PYPI_REPO>
+```
+
+### 3. Pre-pull Test Images (Crucial for Pre-baked Run)
+
+To avoid network throttling and excessive disk I/O when spinning up hundreds of distinct pods simultaneously, cache the pre-baked test images onto your nodes beforehand:
 
 ```bash
 ./sweperf prepull-images
 ```
 
-### 3. Running a Benchmark
+### 4. Running a Benchmark
 
-The `run-benchmark` subcommand spins up a stateless submitter alongside a metrics collector. The submitter queries the Kubernetes API and maintains a strict concurrent pod limit over a user-defined time window, automatically backfilling pods as they complete.
+The submitter commands spin up a stateless submitter alongside a metrics collector. It queries the Kubernetes API and maintains a strict concurrent pod limit over a user-defined time window, automatically backfilling pods as they complete.
 
+**On-Demand Benchmark**
+```bash
+./sweperf run-universal <DURATION_SECONDS> <CONCURRENCY> [PYPI_CACHE_URL]
+
+# Example (20 minutes with 512 active pods, utilizing the PyPI cache):
+# ./sweperf run-universal 1200 512 us-central1-python.pkg.dev/my-project/my-pypi-cache
+```
+
+**Pre-baked Benchmark**
 ```bash
 ./sweperf run-benchmark <DURATION_SECONDS> <CONCURRENCY>
-
-# Example (20 minutes with 512 active pods):
-# ./sweperf run-benchmark 1200 512
 ```
+
+---
 
 ## Testing
 

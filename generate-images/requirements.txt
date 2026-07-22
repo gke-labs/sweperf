@@ -5,3 +5,5 @@ urllib3
 tqdm
 pydantic
 kubernetes
+datasets
+swebench<4.1.0
