@@ -128,7 +128,7 @@ curl -X GET http://<pod-ip>:8080/start
 
 ---
 
-### Universal Singleton Options (PyPI Cache)
+### Universal Singleton Options
 
 When running the **On-Demand Universal Image** (e.g., downloading repositories and packages dynamically), environment variables passed to the pod control how the system clones remote repositories and downloads pip dependencies. Because testing 100+ agents can put severe strain on public networks (like PyPI), `sweperf` natively supports routing pip traffic securely through private caches (like Artifact Registry).
 
