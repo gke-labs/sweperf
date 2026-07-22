@@ -14,7 +14,7 @@ def simulate_typing(command):
     sys.stdout.write("\033[0m\n")
     sys.stdout.flush()
 
-def main():
+def wait_for_signals():
     if os.environ.get("WAIT_FOR_CLAIM_FILE"):
         claim_file = os.environ.get("WAIT_FOR_CLAIM_FILE")
         print(f"Waiting for claim signal in {claim_file}...")
@@ -55,6 +55,9 @@ def main():
                     pass
         print("Start signal received via port!")
         sys.stdout.flush()
+
+def main():
+    wait_for_signals()
 
     if len(sys.argv) != 2:
         print("Usage: python3 replay.py <trace.json>")

@@ -17,6 +17,8 @@ if [ "${USE_GCP_CACHE}" == "1" ]; then
     fi
 fi
 
+python3 -c "import sys; sys.path.append('/'); import replay; replay.wait_for_signals()"
+
 echo "Running environment setup..."
 mkdir -p /testbed
 chown swe-bench:swe-bench /testbed

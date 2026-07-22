@@ -59,6 +59,23 @@ spec:
   - name: agent
     # Replace with your project and repo
     image: us-central1-docker.pkg.dev/<YOUR_PROJECT>/<YOUR_REPO_NAME>/sweperf:universal
+    env:
+    - name: USE_GCP_CACHE
+      value: "1"
+    - name: INSTANCE_ID
+      value: "astropy__astropy-14365"
+    - name: WAIT_FOR_CLAIM_FILE
+      value: "/etc/podinfo/labels"
+    volumeMounts:
+    - name: podinfo
+      mountPath: /etc/podinfo
+  volumes:
+  - name: podinfo
+    downwardAPI:
+      items:
+      - path: "labels"
+        fieldRef:
+          fieldPath: metadata.labels
   restartPolicy: Never
 ```
 
@@ -66,74 +83,23 @@ spec:
 
 ## Image Properties & Usage
 
-Once you have access to the images, you can deploy them directly. There are several useful dials baked into the container.
+Once you have access to the images, you can deploy them directly. There are several useful dials baked into the container, controlled via environment variables.
 
-### Modifying Agent Latency (Extreme Churn Testing)
+### Environment Variable Reference
 
-If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, or if you want to test different latency profiles, you can override the distribution parameters. The timing is parameterizable via environment variables when running the container (these are the defaults):
+**Agent Latency**
+If you want to evaluate maximum cluster churn without being bottlenecked by simulated LLM think time, you can override the distribution parameters.
+- `LLM_LATENCY_MU`: (Default: `2.0414`). Set to a large negative number like `"-5"` to floor out the latency for extreme churn testing (e.g. constant 0.5s delay).
+- `LLM_LATENCY_SIGMA`: (Default: `0.8674`)
+- `LLM_LATENCY_MIN`: (Default: `0.5`)
 
-```yaml
-env:
-- name: LLM_LATENCY_MU
-  value: "2.0414"
-- name: LLM_LATENCY_SIGMA
-  value: "0.8674"
-- name: LLM_LATENCY_MIN
-  value: "0.5"
-```
+**Network & Sandbox Blocking**
+- `WAIT_FOR_CLAIM_FILE`: To use the generated images seamlessly with [Agent Sandbox's warm pools](https://github.com/kubernetes-sigs/agent-sandbox), set this to a file path containing downward API labels (e.g. `/etc/podinfo/labels`). The container will pause all execution (including repository setup) until it finds the `agents.x-k8s.io/sandbox-id` label inside that file.
+- `WAIT_FOR_START_PORT`: If you are not using Agent Sandbox but still want to deploy pods in a "warm" paused state, set this to a port number (e.g., `8080`). The container will stand up a simple TCP server and pause execution until it receives an HTTP GET `/start` request on that port.
 
-To floor out the latency for extreme churn testing (e.g. constant 0.5s delay), you can set `LLM_LATENCY_MU` to a large negative number like `"-5"`, or explicitly set `LLM_LATENCY_MIN` and a negative `LLM_LATENCY_MU`.
-
-### Wait for Claim (Agent Sandbox Integration)
-
-To use the generated images seamlessly with [Agent Sandbox's warm pools](https://github.com/kubernetes-sigs/agent-sandbox), the replay engine can be configured to block execution until the Pod is formally claimed and assigned to a user.
-
-Set the `WAIT_FOR_CLAIM_FILE` environment variable to a file path containing the downward API labels (e.g. `/etc/podinfo/labels`). The replay script will loop indefinitely until it finds the `agents.x-k8s.io/sandbox-id` label inside that file, which is the platform signal injected by Agent Sandbox upon a successful claim.
-
-Example for a pod spec:
-```yaml
-env:
-- name: WAIT_FOR_CLAIM_FILE
-  value: "/etc/podinfo/labels"
-volumeMounts:
-- name: podinfo
-  mountPath: /etc/podinfo
-volumes:
-- name: podinfo
-  downwardAPI:
-    items:
-    - path: "labels"
-      fieldRef:
-        fieldPath: metadata.labels
-```
-
----
-
-### Wait for Start Port (Network Blocking)
-
-If you are not using Agent Sandbox but still want to deploy pods in a "warm" paused state until explicitly triggered, you can use the `WAIT_FOR_START_PORT` mode. This is useful for load testing where you want to spin up pods and have them all start running the agent trajectory simultaneously via a broadcast signal.
-
-Setting the `WAIT_FOR_START_PORT` environment variable to a port number will cause the container to stand up a simple TCP server and pause execution until it receives the string `start` (or an HTTP GET request to `/start`) on that port.
-
-Example for a pod spec:
-```yaml
-env:
-- name: WAIT_FOR_START_PORT
-  value: "8080"
-```
-To trigger the replay engine once the pod is running:
-```bash
-curl -X GET http://<pod-ip>:8080/start
-```
-
----
-
-### Universal Singleton Options
-
-When running the **On-Demand Universal Image** (e.g., downloading repositories and packages dynamically), environment variables passed to the pod control how the system clones remote repositories and downloads pip dependencies. Because testing 100+ agents can put severe strain on public networks (like PyPI), `sweperf` natively supports routing pip traffic securely through private caches (like Artifact Registry).
-
-Supported environment variables specifically for the Universal Image include:
-- `INSTANCE_ID`: The specific SWE-bench task name the container should evaluate (e.g., `astropy__astropy-14365`). This dictates the test files, the package commit, and the exact setup script run.
+**Caching & On-Demand Options (Universal Image Only)**
+When running the **On-Demand Universal Image** (e.g., downloading repositories and packages dynamically), these variables control how the system clones repositories and downloads pip dependencies.
+- `INSTANCE_ID`: **(Required for On-Demand)** The specific SWE-bench task name the container should evaluate (e.g., `astropy__astropy-14365`). This dictates the test files, the package commit, and the exact setup script run.
 - `DO_GIT_PULL`: (Default: `false`) Selects whether `git pull` updates the repository from upstream, depending on your container repository caching strategy.
 - `USE_GCP_CACHE`: (Default: `"0"`) If set to `"1"`, the pod entrypoint will securely ping the internal GCP metadata server to fetch an ephemeral OAuth token for Google Cloud Artifact Registry (used to authenticate a PyPI pull-through proxy).
 - `PIP_INDEX_URL_TEMPLATE`: A PyPI proxy URL string containing a `{TOKEN}` placeholder template (e.g., `https://oauth2accesstoken:{TOKEN}@us-central1-python.pkg.dev/my-project/my-repo/simple/`). This relies on `USE_GCP_CACHE` discovering a token and substituting it securely into the URL.
