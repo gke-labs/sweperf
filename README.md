@@ -128,6 +128,21 @@ curl -X GET http://<pod-ip>:8080/start
 
 ---
 
+### Universal Singleton Options (PyPI Cache)
+
+When running the **On-Demand Universal Image** (e.g., downloading repositories and packages dynamically), environment variables passed to the pod control how the system clones remote repositories and downloads pip dependencies. Because testing 100+ agents can put severe strain on public networks (like PyPI), `sweperf` natively supports routing pip traffic securely through private caches (like Artifact Registry).
+
+Supported environment variables specifically for the Universal Image include:
+- `INSTANCE_ID`: The specific SWE-bench task name the container should evaluate (e.g., `astropy__astropy-14365`). This dictates the test files, the package commit, and the exact setup script run.
+- `DO_GIT_PULL`: (Default: `false`) Selects whether `git pull` updates the repository from upstream, depending on your container repository caching strategy.
+- `USE_GCP_CACHE`: (Default: `"0"`) If set to `"1"`, the pod entrypoint will securely ping the internal GCP metadata server to fetch an ephemeral OAuth token for Google Cloud Artifact Registry (used to authenticate a PyPI pull-through proxy).
+- `PIP_INDEX_URL_TEMPLATE`: A PyPI proxy URL string containing a `{TOKEN}` placeholder template (e.g., `https://oauth2accesstoken:{TOKEN}@us-central1-python.pkg.dev/my-project/my-repo/simple/`). This relies on `USE_GCP_CACHE` discovering a token and substituting it securely into the URL.
+- `PIP_TRUSTED_HOST`: Explicitly specifies the trusted private host, circumventing SSL certificate resolution if a private proxy isn't on a recognized root domain.
+
+*Note: For out-of-the-box cluster orchestration, we recommend using the `./sweperf create-caches` command to spin up Python pull-through proxies automatically, and passing its resulting URL linearly to `./sweperf run-universal 2 300 <URL>`. This instructs the submitter bash loop to automatically plumb all of the above options into the test pod environment variables.*
+
+---
+
 ## Building / Regenerating Images (Advanced)
 
 If you have made edits to the replay engine or script injector, you will need to re-generate the image suite from scratch.
