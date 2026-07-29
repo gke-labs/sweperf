@@ -27,6 +27,7 @@ chown swe-bench:swe-bench /testbed
 sed -i 's/git checkout /git reset --hard \&\& git clean -fd \&\& git checkout /g' /setups/setup_${INSTANCE_ID}.sh
 sed -i 's/.*apt-get.*/true/g' /setups/setup_${INSTANCE_ID}.sh
 sed -i 's/.*locale.gen.*/true/g' /setups/setup_${INSTANCE_ID}.sh
+sed -i '/conda activate/a rm -rf $CONDA_PREFIX/compiler_compat/ld 2>/dev/null || rm -rf /home/swe-bench/miniconda3/envs/*/compiler_compat/ld 2>/dev/null || true' /setups/setup_${INSTANCE_ID}.sh
 
 if su swe-bench -c "export PIP_INDEX_URL='$PIP_INDEX_URL'; bash /setups/setup_${INSTANCE_ID}.sh"; then
     echo "Setup successful. Running evaluation replay as swe-bench user..."
