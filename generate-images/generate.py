@@ -43,8 +43,7 @@ fi
         else:
             cmds.append(f"python -m pip install {pip_packages}")
 
-    if install:
-        cmds.append("python3 -m pip install --no-build-isolation -e /testbed")
+    cmds.append("python3 -m pip install --no-build-isolation -e /testbed")
     if env_commit and str(env_commit) != "None" and env_commit != base_commit:
         cmds.append(f"git checkout {base_commit}")
     return "\n".join(cmds) + "\n"
