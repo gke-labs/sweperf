@@ -25,6 +25,8 @@ chown swe-bench:swe-bench /testbed
 
 # Patch the setup script to forcefully reset any files dirtied by pip install -e .
 sed -i 's/git checkout /git reset --hard \&\& git clean -fd \&\& git checkout /g' /setups/setup_${INSTANCE_ID}.sh
+sed -i 's/.*apt-get.*/true/g' /setups/setup_${INSTANCE_ID}.sh
+sed -i 's/.*locale.gen.*/true/g' /setups/setup_${INSTANCE_ID}.sh
 
 if su swe-bench -c "export PIP_INDEX_URL='$PIP_INDEX_URL'; bash /setups/setup_${INSTANCE_ID}.sh"; then
     echo "Setup successful. Running evaluation replay as swe-bench user..."
