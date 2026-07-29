@@ -118,7 +118,7 @@ def main():
             
         simulate_typing(command)
         
-        cmd_timeout = int(os.environ.get("REPLAY_CMD_TIMEOUT", "30"))
+        cmd_timeout = int(os.environ.get("REPLAY_CMD_TIMEOUT", "300"))
         child.sendline(command)
         try:
             child.expect(unique_prompt, timeout=cmd_timeout)
