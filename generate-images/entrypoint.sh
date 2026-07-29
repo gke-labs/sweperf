@@ -30,6 +30,7 @@ sed -i 's/.*locale.gen.*/true/g' /setups/setup_${INSTANCE_ID}.sh
 sed -i '/conda activate/a rm -rf $CONDA_PREFIX/compiler_compat/ld 2>/dev/null || rm -rf /home/swe-bench/miniconda3/envs/*/compiler_compat/ld 2>/dev/null || true' /setups/setup_${INSTANCE_ID}.sh
 sed -i 's/python3 -m pip install --upgrade pip setuptools wheel/python3 -m pip install --upgrade pip "setuptools<69.0.0" wheel/g' /setups/setup_${INSTANCE_ID}.sh
 sed -i 's/python3 -m pip install -e \/testbed/python3 -m pip install --no-build-isolation -e \/testbed/g' /setups/setup_${INSTANCE_ID}.sh
+sed -i '/pip install --no-build-isolation -e \/testbed/i python3 -m pip install flit_core pybind11 setuptools_scm extension_helpers' /setups/setup_${INSTANCE_ID}.sh
 
 if su swe-bench -c "export PIP_INDEX_URL='$PIP_INDEX_URL'; bash /setups/setup_${INSTANCE_ID}.sh"; then
     echo "Setup successful. Running evaluation replay as swe-bench user..."
