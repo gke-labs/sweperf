@@ -35,10 +35,20 @@ sed -i '/pip install --no-build-isolation -e \/testbed/i python3 -m pip install 
 if su swe-bench -c "export PIP_INDEX_URL='$PIP_INDEX_URL'; bash /setups/setup_${INSTANCE_ID}.sh"; then
     echo "Setup successful. Running evaluation replay as swe-bench user..."
     su swe-bench -c "/usr/bin/python3 /replay.py /traces/${INSTANCE_ID}_trace.json" || {
-        echo 'Task failed during replay, sleeping for debug'
-        sleep 3600
+        if [ "${SLEEP_ON_FAILURE}" == "1" ] || [ "${SLEEP_ON_FAILURE}" == "true" ]; then
+            echo 'Task failed during replay, sleeping for debug'
+            sleep 3600
+        else
+            echo 'Task failed during replay'
+            exit 1
+        fi
     }
 else
-    echo 'Task failed during setup, sleeping for debug'
-    sleep 3600
+    if [ "${SLEEP_ON_FAILURE}" == "1" ] || [ "${SLEEP_ON_FAILURE}" == "true" ]; then
+        echo 'Task failed during setup, sleeping for debug'
+        sleep 3600
+    else
+        echo 'Task failed during setup'
+        exit 1
+    fi
 fi
