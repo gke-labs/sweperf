@@ -21,6 +21,7 @@ def gen_setup_script(instance_id, repo, base_commit, env_commit, python_version,
 
     cmds.append("conda activate testbed")
     cmds.append("rm -rf $CONDA_PREFIX/compiler_compat/ld 2>/dev/null || true")
+    cmds.append("python3 -m pip install --upgrade pip 'setuptools<69.0.0' wheel")
     if pre_install:
         if isinstance(pre_install, list):
             cmds.extend(pre_install)
@@ -42,10 +43,7 @@ fi
             cmds.append(f"python -m pip install {pip_packages}")
 
     if install:
-        if isinstance(install, list):
-            cmds.extend(install)
-        else:
-            cmds.append(install)
+        cmds.append("python3 -m pip install --no-build-isolation -e /testbed")
     if env_commit and str(env_commit) != "None" and env_commit != base_commit:
         cmds.append(f"git checkout {base_commit}")
     return "\n".join(cmds) + "\n"
