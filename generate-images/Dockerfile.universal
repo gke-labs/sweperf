@@ -1,6 +1,10 @@
 FROM sweb.base.x86_64:latest
 USER root
-RUN apt-get update && apt-get install -y python3-pexpect || pip install pexpect
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    curl locales graphviz imagemagick ffmpeg libfreetype6-dev libnetcdf-dev libhdf5-dev pkg-config \
+    dvipng cm-super python3-pexpect && \
+    locale-gen en_US.UTF-8 && \
+    rm -rf /var/lib/apt/lists/*
 COPY setups/ /setups/
 COPY traces/ /traces/
 COPY generate-images/replay.py /replay.py

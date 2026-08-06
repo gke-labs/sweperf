@@ -1,6 +1,47 @@
 import subprocess
 import time
 import sys
+import json
+
+def fetch_node_conditions():
+    proc = subprocess.run(['kubectl', 'get', 'nodes', '-o', 'json'], capture_output=True, text=True)
+    if proc.returncode != 0:
+        return {}
+    try:
+        data = json.loads(proc.stdout)
+    except Exception:
+        return {}
+    
+    conditions_map = {}
+    for item in data.get('items', []):
+        node_name = item.get('metadata', {}).get('name')
+        if not node_name:
+            continue
+        ready = "Unknown"
+        mem_pressure = "False"
+        disk_pressure = "False"
+        pid_pressure = "False"
+        
+        conds = item.get('status', {}).get('conditions', [])
+        for c in conds:
+            c_type = c.get('type')
+            c_status = c.get('status')
+            if c_type == 'Ready':
+                ready = c_status
+            elif c_type == 'MemoryPressure':
+                mem_pressure = c_status
+            elif c_type == 'DiskPressure':
+                disk_pressure = c_status
+            elif c_type == 'PIDPressure':
+                pid_pressure = c_status
+                
+        conditions_map[node_name] = {
+            'ready': ready,
+            'memory_pressure': mem_pressure,
+            'disk_pressure': disk_pressure,
+            'pid_pressure': pid_pressure
+        }
+    return conditions_map
 
 def main():
     if len(sys.argv) != 2:
@@ -11,7 +52,7 @@ def main():
     end_time = time.time() + duration
     
     print("Locked Node Watcher started.")
-    with open('node_metrics.txt', 'w') as f:
+    with open('node_metrics.txt', 'w') as f_metrics, open('node_health.txt', 'w') as f_health:
         while time.time() < end_time:
             timestamp = int(time.time())
             
@@ -47,10 +88,17 @@ def main():
             
             # 3. Write structurally aligned telemetry: TIMESTAMP NODE CPU RAM PODS
             for node_name, stats in node_stats.items():
-                f.write(f"{timestamp} {node_name} {stats['cpu']} {stats['ram']} {stats['pods']}\n")
-            f.flush()
+                f_metrics.write(f"{timestamp} {node_name} {stats['cpu']} {stats['ram']} {stats['pods']}\n")
+            f_metrics.flush()
+
+            # 4. Fetch and log node health & pressure conditions
+            node_conds = fetch_node_conditions()
+            for node_name, cond in node_conds.items():
+                f_health.write(f"{timestamp} {node_name} {cond['ready']} {cond['memory_pressure']} {cond['disk_pressure']} {cond['pid_pressure']}\n")
+            f_health.flush()
             
             time.sleep(10)
 
 if __name__ == "__main__":
     main()
+

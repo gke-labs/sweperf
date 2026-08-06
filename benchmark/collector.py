@@ -3,6 +3,32 @@ import subprocess
 import time
 import sys
 
+def is_pod_oom(pod):
+    status = pod.get("status", {})
+    if status.get("reason") == "OOMKilled":
+        return True
+    
+    container_statuses = (
+        status.get("containerStatuses", []) +
+        status.get("initContainerStatuses", []) +
+        status.get("ephemeralContainerStatuses", [])
+    )
+    for c_status in container_statuses:
+        state_term = c_status.get("state", {}).get("terminated", {})
+        last_term = c_status.get("lastState", {}).get("terminated", {})
+        state_wait = c_status.get("state", {}).get("waiting", {})
+        
+        if (state_term.get("reason") == "OOMKilled" or state_term.get("exitCode") == 137 or
+            last_term.get("reason") == "OOMKilled" or last_term.get("exitCode") == 137 or
+            state_wait.get("reason") == "OOMKilled"):
+            return True
+            
+    message = status.get("message", "")
+    if message and "OOMKilled" in message:
+        return True
+
+    return False
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: python3 collector.py <duration_seconds>")
@@ -21,6 +47,7 @@ def main():
                 data = json.loads(result.stdout)
                 running = 0
                 pending = 0
+                ooms = 0
                 for pod in data.get("items", []):
                     pod_uid = pod["metadata"]["uid"]
                     seen_pods[pod_uid] = pod
@@ -29,8 +56,12 @@ def main():
                         running += 1
                     elif phase == "Pending":
                         pending += 1
+                    
+                    if is_pod_oom(pod):
+                        ooms += 1
+
                 with open("concurrency.txt", "a") as f_conc:
-                    f_conc.write(f"{time.time()} {pending} {running}\n")
+                    f_conc.write(f"{time.time()} {pending} {running} {ooms}\n")
         except Exception as e:
             pass
             

@@ -118,11 +118,24 @@ def main():
             
         simulate_typing(command)
         
+        cmd_timeout = int(os.environ.get("REPLAY_CMD_TIMEOUT", "300"))
         child.sendline(command)
-        child.expect(unique_prompt)
-        
-        # Since echo is off, child.before is strictly the command's output
-        clean_output = child.before
+        try:
+            child.expect(unique_prompt, timeout=cmd_timeout)
+            clean_output = child.before
+        except pexpect.exceptions.TIMEOUT:
+            sys.stdout.write(f"\n[Warning: Command timed out after {cmd_timeout}s. Sending interrupt and continuing...]\n")
+            sys.stdout.flush()
+            child.sendcontrol('c')
+            try:
+                child.expect(unique_prompt, timeout=5)
+            except Exception:
+                child.sendline(f"export PS1='{unique_prompt}'")
+                try:
+                    child.expect(unique_prompt, timeout=5)
+                except Exception:
+                    pass
+            clean_output = getattr(child, 'before', '') or ""
             
         # Clean trailing newlines before the prompt
         if clean_output.endswith('\r\n'):

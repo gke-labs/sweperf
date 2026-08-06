@@ -47,7 +47,14 @@ def parse_metrics(lines):
                 data[node]['per_job_ram'].append(ram / pods)
                 if 'history' not in data[node]:
                     data[node]['history'] = []
-                data[node]['history'].append((int(timestamp), cpu / pods, ram / pods))
+                try:
+                    ts_val = int(timestamp)
+                except ValueError:
+                    try:
+                        ts_val = int(datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp())
+                    except Exception:
+                        ts_val = 0
+                data[node]['history'].append((ts_val, cpu / pods, ram / pods))
                 
     return data
 
@@ -73,8 +80,8 @@ def parse_job_metrics(file_path, node_data=None):
         'failed': 0,
         'oom_killed': 0,
         'other_errors': 0,
-        'by_job_group': collections.defaultdict(lambda: {'succeeded': 0, 'failed': 0, 'lengths': [], 'cpu': [], 'ram': []}),
-        'by_job_type': collections.defaultdict(lambda: {'succeeded': 0, 'failed': 0, 'lengths': [], 'cpu': [], 'ram': []})
+        'by_job_group': collections.defaultdict(lambda: {'succeeded': 0, 'failed': 0, 'oom_killed': 0, 'lengths': [], 'cpu': [], 'ram': []}),
+        'by_job_type': collections.defaultdict(lambda: {'succeeded': 0, 'failed': 0, 'oom_killed': 0, 'lengths': [], 'cpu': [], 'ram': []})
     }
     try:
         with open(file_path, 'r') as f:
@@ -108,36 +115,57 @@ def parse_job_metrics(file_path, node_data=None):
 
                 status = item.get('status', {})
                 start_time_str = status.get('startTime')
-                if not start_time_str:
-                    continue
-                try:
-                    start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%SZ")
-                except ValueError:
-                    continue
+                start_time = None
+                if start_time_str:
+                    try:
+                        start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%SZ")
+                    except ValueError:
+                        pass
                     
-                if creation_time and start_time >= creation_time:
+                if creation_time and start_time and start_time >= creation_time:
                     pending = (start_time - creation_time).total_seconds()
                     metrics['pending_times'].append(pending)
                 
                 finished_at = None
                 exit_code = None
                 reason = None
-                for c_status in status.get('containerStatuses', []):
-                    term = c_status.get('state', {}).get('terminated', {})
-                    if term.get('finishedAt'):
-                        finished_at_str = term['finishedAt']
-                        try:
-                            finished_at = datetime.strptime(finished_at_str, "%Y-%m-%dT%H:%M:%SZ")
-                        except (ValueError, TypeError):
-                            pass
-                        exit_code = term.get('exitCode')
-                        reason = term.get('reason')
-                        break
+                is_oom = False
+
+                container_statuses = (
+                    status.get('containerStatuses', []) +
+                    status.get('initContainerStatuses', []) +
+                    status.get('ephemeralContainerStatuses', [])
+                )
+                for c_status in container_statuses:
+                    state_term = c_status.get('state', {}).get('terminated', {})
+                    last_term = c_status.get('lastState', {}).get('terminated', {})
+                    state_wait = c_status.get('state', {}).get('waiting', {})
+
+                    term = state_term if state_term else last_term
+                    if term:
+                        if term.get('finishedAt') and not finished_at:
+                            finished_at_str = term['finishedAt']
+                            try:
+                                finished_at = datetime.strptime(finished_at_str, "%Y-%m-%dT%H:%M:%SZ")
+                            except (ValueError, TypeError):
+                                pass
+                        if term.get('exitCode') is not None and exit_code is None:
+                            exit_code = term.get('exitCode')
+                        if term.get('reason') and not reason:
+                            reason = term.get('reason')
+
+                    if (state_term.get('reason') == 'OOMKilled' or state_term.get('exitCode') == 137 or
+                        last_term.get('reason') == 'OOMKilled' or last_term.get('exitCode') == 137 or
+                        state_wait.get('reason') == 'OOMKilled'):
+                        is_oom = True
+
+                if status.get('reason') == 'OOMKilled' or reason == 'OOMKilled' or exit_code == 137:
+                    is_oom = True
                 
-                if not metrics['earliest_start'] or start_time < metrics['earliest_start']:
+                if start_time and (not metrics['earliest_start'] or start_time < metrics['earliest_start']):
                     metrics['earliest_start'] = start_time
 
-                if finished_at:
+                if finished_at and start_time:
                     job_len = (finished_at - start_time).total_seconds()
                     if job_len >= 0:
                         metrics['lengths'].append(job_len)
@@ -156,18 +184,22 @@ def parse_job_metrics(file_path, node_data=None):
                     if not metrics['latest_end'] or finished_at > metrics['latest_end']:
                         metrics['latest_end'] = finished_at
                         
-                    if exit_code == 0:
-                        metrics['succeeded'] += 1
-                        metrics['by_job_group'][job_group]['succeeded'] += 1
-                        metrics['by_job_type'][job_type]['succeeded'] += 1
-                    else:
-                        metrics['failed'] += 1
-                        metrics['by_job_group'][job_group]['failed'] += 1
-                        metrics['by_job_type'][job_type]['failed'] += 1
-                        if reason == 'OOMKilled':
-                            metrics['oom_killed'] += 1
-                        else:
-                            metrics['other_errors'] += 1
+                if is_oom:
+                    metrics['failed'] += 1
+                    metrics['oom_killed'] += 1
+                    metrics['by_job_group'][job_group]['failed'] += 1
+                    metrics['by_job_group'][job_group]['oom_killed'] += 1
+                    metrics['by_job_type'][job_type]['failed'] += 1
+                    metrics['by_job_type'][job_type]['oom_killed'] += 1
+                elif exit_code == 0:
+                    metrics['succeeded'] += 1
+                    metrics['by_job_group'][job_group]['succeeded'] += 1
+                    metrics['by_job_type'][job_type]['succeeded'] += 1
+                elif exit_code is not None or status.get('phase') == 'Failed':
+                    metrics['failed'] += 1
+                    metrics['other_errors'] += 1
+                    metrics['by_job_group'][job_group]['failed'] += 1
+                    metrics['by_job_type'][job_type]['failed'] += 1
     except (FileNotFoundError, json.JSONDecodeError):
         pass
     
@@ -182,24 +214,28 @@ def process_job_metrics(metrics):
     report.append("### Job Performance & Health Report")
     report.append("")
     
-    if not lengths and not metrics['pending_times']:
+    total_completed = metrics['succeeded'] + metrics['failed']
+    if total_completed == 0 and not lengths and not metrics['pending_times']:
         report.append("No job data found.")
         report.append("")
         return "\n".join(report)
 
-    if lengths:
-        lengths_sorted = sorted(lengths)
-        avg_len = sum(lengths_sorted) / len(lengths_sorted)
-        max_len = lengths_sorted[-1]
-        p90_len = percentile(lengths_sorted, 0.90)
-
-        report.append(f"- **Completed Jobs:** {len(lengths)} (Succeeded: {metrics['succeeded']}, Failed: {metrics['failed']})")
+    if lengths or total_completed > 0:
+        count_completed = max(len(lengths), total_completed)
+        report.append(f"- **Completed Jobs:** {count_completed} (Succeeded: {metrics['succeeded']}, Failed: {metrics['failed']})")
         if metrics['failed'] > 0:
             report.append(f"  - **Failures:** OOMKilled: {metrics['oom_killed']}, Other Errors: {metrics['other_errors']}")
-            
-        report.append(f"- **Job Length (s):** Avg: {avg_len:.1f}, Max: {max_len:.1f}, P90: {p90_len:.1f}")
+        else:
+            report.append(f"  - **OOMKilled Pods:** {metrics['oom_killed']}")
 
-        if earliest_start and latest_end and latest_end > earliest_start:
+        if lengths:
+            lengths_sorted = sorted(lengths)
+            avg_len = sum(lengths_sorted) / len(lengths_sorted)
+            max_len = lengths_sorted[-1]
+            p90_len = percentile(lengths_sorted, 0.90)
+            report.append(f"- **Job Length (s):** Avg: {avg_len:.1f}, Max: {max_len:.1f}, P90: {p90_len:.1f}")
+
+        if earliest_start and latest_end and latest_end > earliest_start and lengths:
             total_duration = (latest_end - earliest_start).total_seconds()
             throughput_min = (len(lengths) / total_duration) * 60
             report.append(f"- **Throughput:**     {throughput_min:.2f} jobs/minute")
@@ -209,8 +245,8 @@ def process_job_metrics(metrics):
             report.append("")
             report.append("#### Job Statistics by Repository Group")
             report.append("")
-            report.append("| Repository Group | Total | Succeeded | Failed | Avg Time (s) | Max Time (s) | Avg CPU (m) | Avg RAM (MiB) |")
-            report.append("|---|---|---|---|---|---|---|---|")
+            report.append("| Repository Group | Total | Succeeded | Failed | OOMKilled | Avg Time (s) | Max Time (s) | Avg CPU (m) | Peak CPU (m) | P90 CPU (m) | Avg RAM (MiB) | Peak RAM (MiB) | P90 RAM (MiB) |")
+            report.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
             for t_name, t_metrics in sorted(by_group.items()):
                 t_total = len(t_metrics['lengths']) + (t_metrics['succeeded'] + t_metrics['failed'] - len(t_metrics['lengths']))
                 t_total = max(t_total, t_metrics['succeeded'] + t_metrics['failed'])
@@ -218,9 +254,19 @@ def process_job_metrics(metrics):
                     continue
                 t_avg = sum(t_metrics['lengths']) / max(1, len(t_metrics['lengths']))
                 t_max = max(t_metrics['lengths']) if t_metrics['lengths'] else 0
-                c_cpu = sum(t_metrics['cpu']) / max(1, len(t_metrics['cpu'])) if t_metrics['cpu'] else 0
-                c_ram = sum(t_metrics['ram']) / max(1, len(t_metrics['ram'])) if t_metrics['ram'] else 0
-                report.append(f"| `{t_name}` | {t_total} | {t_metrics['succeeded']} | {t_metrics['failed']} | {t_avg:.1f} | {t_max:.1f} | {c_cpu:.1f} | {c_ram:.1f} |")
+                
+                cpus_s = sorted(t_metrics['cpu']) if t_metrics['cpu'] else []
+                c_cpu_avg = sum(cpus_s) / max(1, len(cpus_s)) if cpus_s else 0
+                c_cpu_max = cpus_s[-1] if cpus_s else 0
+                c_cpu_p90 = percentile(cpus_s, 0.90) if cpus_s else 0
+                
+                rams_s = sorted(t_metrics['ram']) if t_metrics['ram'] else []
+                c_ram_avg = sum(rams_s) / max(1, len(rams_s)) if rams_s else 0
+                c_ram_max = rams_s[-1] if rams_s else 0
+                c_ram_p90 = percentile(rams_s, 0.90) if rams_s else 0
+                
+                oom_cnt = t_metrics.get('oom_killed', 0)
+                report.append(f"| `{t_name}` | {t_total} | {t_metrics['succeeded']} | {t_metrics['failed']} | {oom_cnt} | {t_avg:.1f} | {t_max:.1f} | {c_cpu_avg:.1f} | {c_cpu_max:.1f} | {c_cpu_p90:.1f} | {c_ram_avg:.1f} | {c_ram_max:.1f} | {c_ram_p90:.1f} |")
             report.append("")
             
         by_type = metrics.get('by_job_type', {})
@@ -228,8 +274,8 @@ def process_job_metrics(metrics):
             report.append("")
             report.append("#### Job Statistics by Specific Test Case")
             report.append("")
-            report.append("| Test Case (Instance ID) | Total | Succeeded | Failed | Avg Time (s) | Max Time (s) | Avg CPU (m) | Avg RAM (MiB) |")
-            report.append("|---|---|---|---|---|---|---|---|")
+            report.append("| Test Case (Instance ID) | Total | Succeeded | Failed | OOMKilled | Avg Time (s) | Max Time (s) | Avg CPU (m) | Peak CPU (m) | P90 CPU (m) | Avg RAM (MiB) | Peak RAM (MiB) | P90 RAM (MiB) |")
+            report.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
             for t_name, t_metrics in sorted(by_type.items()):
                 t_total = len(t_metrics['lengths']) + (t_metrics['succeeded'] + t_metrics['failed'] - len(t_metrics['lengths']))
                 t_total = max(t_total, t_metrics['succeeded'] + t_metrics['failed'])
@@ -237,9 +283,19 @@ def process_job_metrics(metrics):
                     continue
                 t_avg = sum(t_metrics['lengths']) / max(1, len(t_metrics['lengths']))
                 t_max = max(t_metrics['lengths']) if t_metrics['lengths'] else 0
-                c_cpu = sum(t_metrics['cpu']) / max(1, len(t_metrics['cpu'])) if t_metrics['cpu'] else 0
-                c_ram = sum(t_metrics['ram']) / max(1, len(t_metrics['ram'])) if t_metrics['ram'] else 0
-                report.append(f"| `{t_name}` | {t_total} | {t_metrics['succeeded']} | {t_metrics['failed']} | {t_avg:.1f} | {t_max:.1f} | {c_cpu:.1f} | {c_ram:.1f} |")
+                
+                cpus_s = sorted(t_metrics['cpu']) if t_metrics['cpu'] else []
+                c_cpu_avg = sum(cpus_s) / max(1, len(cpus_s)) if cpus_s else 0
+                c_cpu_max = cpus_s[-1] if cpus_s else 0
+                c_cpu_p90 = percentile(cpus_s, 0.90) if cpus_s else 0
+                
+                rams_s = sorted(t_metrics['ram']) if t_metrics['ram'] else []
+                c_ram_avg = sum(rams_s) / max(1, len(rams_s)) if rams_s else 0
+                c_ram_max = rams_s[-1] if rams_s else 0
+                c_ram_p90 = percentile(rams_s, 0.90) if rams_s else 0
+                
+                oom_cnt = t_metrics.get('oom_killed', 0)
+                report.append(f"| `{t_name}` | {t_total} | {t_metrics['succeeded']} | {t_metrics['failed']} | {oom_cnt} | {t_avg:.1f} | {t_max:.1f} | {c_cpu_avg:.1f} | {c_cpu_max:.1f} | {c_cpu_p90:.1f} | {c_ram_avg:.1f} | {c_ram_max:.1f} | {c_ram_p90:.1f} |")
             report.append("")
             
     if metrics['pending_times']:
@@ -252,12 +308,21 @@ def process_job_metrics(metrics):
     if os.path.exists('concurrency.txt'):
         running_pts = []
         pending_pts = []
+        oom_pts = []
         with open('concurrency.txt', 'r') as cf:
             for c_line in cf:
                 parts = c_line.strip().split()
                 if len(parts) >= 3:
-                    pending_pts.append(int(parts[1]))
-                    running_pts.append(int(parts[2]))
+                    try:
+                        pending_pts.append(int(parts[1]))
+                        running_pts.append(int(parts[2]))
+                    except ValueError:
+                        pass
+                if len(parts) >= 4:
+                    try:
+                        oom_pts.append(int(parts[3]))
+                    except ValueError:
+                        pass
         
         if running_pts:
             r_avg = sum(running_pts) / len(running_pts)
@@ -265,6 +330,8 @@ def process_job_metrics(metrics):
             report.append("")
             report.append(f"- **Outstanding Queue (Pending):** Avg: {p_avg:.1f}, Peak: {max(pending_pts)}")
             report.append(f"- **Active In-Flight (Running):** Avg: {r_avg:.1f}, Peak: {max(running_pts)}")
+            if oom_pts:
+                report.append(f"- **Active OOM Pods:** Peak: {max(oom_pts)}")
     
     report.append("")
     return "\n".join(report)
@@ -293,14 +360,144 @@ def process_metrics(data):
         report.append("")
     return "\n".join(report)
 
+def process_node_health(file_path):
+    if not os.path.exists(file_path):
+        return ""
+    
+    node_records = collections.defaultdict(list)
+    try:
+        with open(file_path, 'r') as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) >= 6:
+                    try:
+                        ts = int(parts[0])
+                        node = parts[1]
+                        ready = parts[2]
+                        mem = parts[3]
+                        disk = parts[4]
+                        pid = parts[5]
+                        node_records[node].append((ts, ready, mem, disk, pid))
+                    except ValueError:
+                        pass
+    except Exception:
+        return ""
+    
+    if not node_records:
+        return ""
+
+    node_stats = {}
+    nodes_under_pressure_count = 0
+
+    for node, records in sorted(node_records.items()):
+        records.sort(key=lambda x: x[0])
+        total_unhealthy_time = 0
+        mem_pressure_time = 0
+        disk_pressure_time = 0
+        pid_pressure_time = 0
+        not_ready_time = 0
+        
+        for i in range(len(records)):
+            ts, ready, mem, disk, pid = records[i]
+            if i < len(records) - 1:
+                duration = records[i+1][0] - ts
+            else:
+                duration = 10
+            
+            duration = max(1, min(duration, 60))
+
+            is_mem = (mem.lower() == 'true')
+            is_disk = (disk.lower() == 'true')
+            is_pid = (pid.lower() == 'true')
+            is_not_ready = (ready.lower() != 'true')
+
+            if is_mem:
+                mem_pressure_time += duration
+            if is_disk:
+                disk_pressure_time += duration
+            if is_pid:
+                pid_pressure_time += duration
+            if is_not_ready:
+                not_ready_time += duration
+
+            if is_mem or is_disk or is_pid or is_not_ready:
+                total_unhealthy_time += duration
+
+        if total_unhealthy_time > 0:
+            nodes_under_pressure_count += 1
+
+        node_stats[node] = {
+            'total_unhealthy': total_unhealthy_time,
+            'mem_pressure': mem_pressure_time,
+            'disk_pressure': disk_pressure_time,
+            'pid_pressure': pid_pressure_time,
+            'not_ready': not_ready_time
+        }
+
+    report = []
+    report.append("### Node Health & Resource Pressure Report")
+    report.append("")
+    report.append(f"- **Total Nodes Monitored:** {len(node_stats)}")
+    report.append(f"- **Nodes Experiencing Resource Pressure / Unhealthiness:** {nodes_under_pressure_count}")
+    report.append("")
+
+    if nodes_under_pressure_count > 0:
+        report.append("| Node | Ready (NotReady/Unavailable) | Memory Pressure | Disk Pressure | PID Pressure | Total Duration Under Pressure / Unhealthy |")
+        report.append("|---|---|---|---|---|---|")
+        for node, stats in sorted(node_stats.items()):
+            if stats['total_unhealthy'] > 0:
+                nr_str = f"{stats['not_ready']}s"
+                mem_str = f"{stats['mem_pressure']}s"
+                disk_str = f"{stats['disk_pressure']}s"
+                pid_str = f"{stats['pid_pressure']}s"
+                tot_s = stats['total_unhealthy']
+                tot_str = f"{tot_s}s ({tot_s // 60}m {tot_s % 60}s)"
+                report.append(f"| `{node}` | {nr_str} | {mem_str} | {disk_str} | {pid_str} | {tot_str} |")
+    else:
+        report.append("All nodes remained Healthy & Ready with no resource pressure throughout the run.")
+    
+    report.append("")
+    return "\n".join(report)
+
 if __name__ == "__main__":
     report_parts = []
     node_data = None
+    timestamps = []
     try:
         with open('node_metrics.txt', 'r') as f:
             lines = f.readlines()
+            for line in lines:
+                parts = line.strip().split()
+                if parts:
+                    try:
+                        ts = int(parts[0])
+                        timestamps.append(ts)
+                    except ValueError:
+                        try:
+                            ts = int(datetime.strptime(parts[0], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp())
+                            timestamps.append(ts)
+                        except Exception:
+                            pass
             node_data = parse_metrics(lines)
+            if timestamps:
+                start_ts = min(timestamps)
+                end_ts = max(timestamps)
+                start_dt = datetime.fromtimestamp(start_ts, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+                end_dt = datetime.fromtimestamp(end_ts, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+                duration = end_ts - start_ts
+                timing_report = [
+                    "### Run Timing",
+                    "",
+                    f"- **Start Time:** {start_dt}",
+                    f"- **End Time:**   {end_dt}",
+                    f"- **Duration:**   {duration} seconds ({duration // 60}m {duration % 60}s)",
+                    ""
+                ]
+                report_parts.append("\n".join(timing_report))
             report_parts.append(process_metrics(node_data))
+            health_report = process_node_health('node_health.txt')
+            if health_report:
+                report_parts.append(health_report)
     except FileNotFoundError:
         print("node_metrics.txt not found.")
         sys.exit(1)
@@ -311,25 +508,31 @@ if __name__ == "__main__":
 
     # Add Per-Job Math using Aligned Telemetry
     if node_data:
-        avg_cpu_per_job = 0
-        avg_ram_per_job = 0
-        total_slices = 0
+        all_cpu_slices = []
+        all_ram_slices = []
         
         for node, n_metrics in node_data.items():
             if n_metrics.get('per_job_cpu'):
-                avg_cpu_per_job += sum(n_metrics['per_job_cpu'])
-                avg_ram_per_job += sum(n_metrics['per_job_ram'])
-                total_slices += len(n_metrics['per_job_cpu'])
+                all_cpu_slices.extend(n_metrics['per_job_cpu'])
+                all_ram_slices.extend(n_metrics['per_job_ram'])
                 
-        if total_slices > 0:
-            avg_cpu_per_job /= total_slices
-            avg_ram_per_job /= total_slices
+        if all_cpu_slices and all_ram_slices:
+            cpu_sorted = sorted(all_cpu_slices)
+            ram_sorted = sorted(all_ram_slices)
+            
+            avg_cpu = sum(cpu_sorted) / len(cpu_sorted)
+            p90_cpu = percentile(cpu_sorted, 0.90)
+            peak_cpu = cpu_sorted[-1]
+            
+            avg_ram = sum(ram_sorted) / len(ram_sorted)
+            p90_ram = percentile(ram_sorted, 0.90)
+            peak_ram = ram_sorted[-1]
             
             heuristics_report = [
                 "### Per-Job Footprint (Cost Heuristics)",
                 "",
-                f"- **Avg CPU per job:** {avg_cpu_per_job:.1f} millicores (Calculated via Aligned Point-in-Time Slice Arrays)",
-                f"- **Avg RAM per job:** {avg_ram_per_job:.1f} MiB (Includes native node OS caching)",
+                f"- **CPU per job (millicores):** Avg: {avg_cpu:.1f}, Peak: {peak_cpu:.1f}, P90: {p90_cpu:.1f} (Calculated via Aligned Point-in-Time Slice Arrays)",
+                f"- **RAM per job (MiB):**        Avg: {avg_ram:.1f}, Peak: {peak_ram:.1f}, P90: {p90_ram:.1f} (Includes native node OS caching)",
                 ""
             ]
             report_parts.append("\n".join(heuristics_report))

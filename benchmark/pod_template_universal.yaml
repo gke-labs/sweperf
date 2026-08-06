@@ -15,8 +15,8 @@ spec:
         memory: "4Gi"
         cpu: "12"
       requests:
-        cpu: "10m"
-        memory: "10Mi"
+        cpu: "330m"
+        memory: "1200Mi"
     env:
     - name: USE_GCP_CACHE
       value: "1"
