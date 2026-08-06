@@ -245,8 +245,8 @@ def process_job_metrics(metrics):
             report.append("")
             report.append("#### Job Statistics by Repository Group")
             report.append("")
-            report.append("| Repository Group | Total | Succeeded | Failed | OOMKilled | Avg Time (s) | Max Time (s) | Avg CPU (m) | Avg RAM (MiB) |")
-            report.append("|---|---|---|---|---|---|---|---|---|")
+            report.append("| Repository Group | Total | Succeeded | Failed | OOMKilled | Avg Time (s) | Max Time (s) | Avg CPU (m) | Peak CPU (m) | P90 CPU (m) | Avg RAM (MiB) | Peak RAM (MiB) | P90 RAM (MiB) |")
+            report.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
             for t_name, t_metrics in sorted(by_group.items()):
                 t_total = len(t_metrics['lengths']) + (t_metrics['succeeded'] + t_metrics['failed'] - len(t_metrics['lengths']))
                 t_total = max(t_total, t_metrics['succeeded'] + t_metrics['failed'])
@@ -254,10 +254,19 @@ def process_job_metrics(metrics):
                     continue
                 t_avg = sum(t_metrics['lengths']) / max(1, len(t_metrics['lengths']))
                 t_max = max(t_metrics['lengths']) if t_metrics['lengths'] else 0
-                c_cpu = sum(t_metrics['cpu']) / max(1, len(t_metrics['cpu'])) if t_metrics['cpu'] else 0
-                c_ram = sum(t_metrics['ram']) / max(1, len(t_metrics['ram'])) if t_metrics['ram'] else 0
+                
+                cpus_s = sorted(t_metrics['cpu']) if t_metrics['cpu'] else []
+                c_cpu_avg = sum(cpus_s) / max(1, len(cpus_s)) if cpus_s else 0
+                c_cpu_max = cpus_s[-1] if cpus_s else 0
+                c_cpu_p90 = percentile(cpus_s, 0.90) if cpus_s else 0
+                
+                rams_s = sorted(t_metrics['ram']) if t_metrics['ram'] else []
+                c_ram_avg = sum(rams_s) / max(1, len(rams_s)) if rams_s else 0
+                c_ram_max = rams_s[-1] if rams_s else 0
+                c_ram_p90 = percentile(rams_s, 0.90) if rams_s else 0
+                
                 oom_cnt = t_metrics.get('oom_killed', 0)
-                report.append(f"| `{t_name}` | {t_total} | {t_metrics['succeeded']} | {t_metrics['failed']} | {oom_cnt} | {t_avg:.1f} | {t_max:.1f} | {c_cpu:.1f} | {c_ram:.1f} |")
+                report.append(f"| `{t_name}` | {t_total} | {t_metrics['succeeded']} | {t_metrics['failed']} | {oom_cnt} | {t_avg:.1f} | {t_max:.1f} | {c_cpu_avg:.1f} | {c_cpu_max:.1f} | {c_cpu_p90:.1f} | {c_ram_avg:.1f} | {c_ram_max:.1f} | {c_ram_p90:.1f} |")
             report.append("")
             
         by_type = metrics.get('by_job_type', {})
@@ -265,8 +274,8 @@ def process_job_metrics(metrics):
             report.append("")
             report.append("#### Job Statistics by Specific Test Case")
             report.append("")
-            report.append("| Test Case (Instance ID) | Total | Succeeded | Failed | OOMKilled | Avg Time (s) | Max Time (s) | Avg CPU (m) | Avg RAM (MiB) |")
-            report.append("|---|---|---|---|---|---|---|---|---|")
+            report.append("| Test Case (Instance ID) | Total | Succeeded | Failed | OOMKilled | Avg Time (s) | Max Time (s) | Avg CPU (m) | Peak CPU (m) | P90 CPU (m) | Avg RAM (MiB) | Peak RAM (MiB) | P90 RAM (MiB) |")
+            report.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|")
             for t_name, t_metrics in sorted(by_type.items()):
                 t_total = len(t_metrics['lengths']) + (t_metrics['succeeded'] + t_metrics['failed'] - len(t_metrics['lengths']))
                 t_total = max(t_total, t_metrics['succeeded'] + t_metrics['failed'])
@@ -274,10 +283,19 @@ def process_job_metrics(metrics):
                     continue
                 t_avg = sum(t_metrics['lengths']) / max(1, len(t_metrics['lengths']))
                 t_max = max(t_metrics['lengths']) if t_metrics['lengths'] else 0
-                c_cpu = sum(t_metrics['cpu']) / max(1, len(t_metrics['cpu'])) if t_metrics['cpu'] else 0
-                c_ram = sum(t_metrics['ram']) / max(1, len(t_metrics['ram'])) if t_metrics['ram'] else 0
+                
+                cpus_s = sorted(t_metrics['cpu']) if t_metrics['cpu'] else []
+                c_cpu_avg = sum(cpus_s) / max(1, len(cpus_s)) if cpus_s else 0
+                c_cpu_max = cpus_s[-1] if cpus_s else 0
+                c_cpu_p90 = percentile(cpus_s, 0.90) if cpus_s else 0
+                
+                rams_s = sorted(t_metrics['ram']) if t_metrics['ram'] else []
+                c_ram_avg = sum(rams_s) / max(1, len(rams_s)) if rams_s else 0
+                c_ram_max = rams_s[-1] if rams_s else 0
+                c_ram_p90 = percentile(rams_s, 0.90) if rams_s else 0
+                
                 oom_cnt = t_metrics.get('oom_killed', 0)
-                report.append(f"| `{t_name}` | {t_total} | {t_metrics['succeeded']} | {t_metrics['failed']} | {oom_cnt} | {t_avg:.1f} | {t_max:.1f} | {c_cpu:.1f} | {c_ram:.1f} |")
+                report.append(f"| `{t_name}` | {t_total} | {t_metrics['succeeded']} | {t_metrics['failed']} | {oom_cnt} | {t_avg:.1f} | {t_max:.1f} | {c_cpu_avg:.1f} | {c_cpu_max:.1f} | {c_cpu_p90:.1f} | {c_ram_avg:.1f} | {c_ram_max:.1f} | {c_ram_p90:.1f} |")
             report.append("")
             
     if metrics['pending_times']:
@@ -490,25 +508,31 @@ if __name__ == "__main__":
 
     # Add Per-Job Math using Aligned Telemetry
     if node_data:
-        avg_cpu_per_job = 0
-        avg_ram_per_job = 0
-        total_slices = 0
+        all_cpu_slices = []
+        all_ram_slices = []
         
         for node, n_metrics in node_data.items():
             if n_metrics.get('per_job_cpu'):
-                avg_cpu_per_job += sum(n_metrics['per_job_cpu'])
-                avg_ram_per_job += sum(n_metrics['per_job_ram'])
-                total_slices += len(n_metrics['per_job_cpu'])
+                all_cpu_slices.extend(n_metrics['per_job_cpu'])
+                all_ram_slices.extend(n_metrics['per_job_ram'])
                 
-        if total_slices > 0:
-            avg_cpu_per_job /= total_slices
-            avg_ram_per_job /= total_slices
+        if all_cpu_slices and all_ram_slices:
+            cpu_sorted = sorted(all_cpu_slices)
+            ram_sorted = sorted(all_ram_slices)
+            
+            avg_cpu = sum(cpu_sorted) / len(cpu_sorted)
+            p90_cpu = percentile(cpu_sorted, 0.90)
+            peak_cpu = cpu_sorted[-1]
+            
+            avg_ram = sum(ram_sorted) / len(ram_sorted)
+            p90_ram = percentile(ram_sorted, 0.90)
+            peak_ram = ram_sorted[-1]
             
             heuristics_report = [
                 "### Per-Job Footprint (Cost Heuristics)",
                 "",
-                f"- **Avg CPU per job:** {avg_cpu_per_job:.1f} millicores (Calculated via Aligned Point-in-Time Slice Arrays)",
-                f"- **Avg RAM per job:** {avg_ram_per_job:.1f} MiB (Includes native node OS caching)",
+                f"- **CPU per job (millicores):** Avg: {avg_cpu:.1f}, Peak: {peak_cpu:.1f}, P90: {p90_cpu:.1f} (Calculated via Aligned Point-in-Time Slice Arrays)",
+                f"- **RAM per job (MiB):**        Avg: {avg_ram:.1f}, Peak: {peak_ram:.1f}, P90: {p90_ram:.1f} (Includes native node OS caching)",
                 ""
             ]
             report_parts.append("\n".join(heuristics_report))
