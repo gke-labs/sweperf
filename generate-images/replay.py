@@ -1,141 +1,430 @@
-import sys
+#!/usr/bin/env python3
+"""SWE-perf Asynchronous Execution Engine & HTTP Server.
+
+Exposes an asynchronous REST API for executing chunks of pre-recorded agent trajectories:
+- POST /execute: Dispatches a bounded chunk of trace commands in a background daemon thread. Returns 202 Accepted.
+- GET /status?job_id=<id>: Queries in-memory execution state ("RUNNING", "COMPLETED", "FAILED").
+- Legacy TCP fallback mode available via SWEPERF_LEGACY_TCP=1.
+"""
+
+import http.server
 import json
-import time
-import pexpect
 import os
 import random
+import socket
+import subprocess
+import sys
+import threading
+import time
+import urllib.parse
+import uuid
+from typing import Any, Dict, List, Optional, Tuple
 
-def simulate_typing(command):
-    sys.stdout.write("\033[92m$ ") # Green prompt
-    for char in command:
-        sys.stdout.write(char)
-        sys.stdout.flush()
-        time.sleep(0.01)
-    sys.stdout.write("\033[0m\n")
+
+class ExecutionState:
+  """Thread-safe in-memory state tracking for asynchronous execution jobs."""
+
+  def __init__(self) -> None:
+    self.lock = threading.Lock()
+    self.jobs: Dict[str, Dict[str, Any]] = {}
+    self.active_job_id: Optional[str] = None
+    self.last_completed_step: int = 0
+    self.total_steps: int = 0
+    self.trace_commands: List[Any] = []
+
+  def load_trace(self, trace_path: str) -> None:
+    """Loads trajectory commands from a JSON trace file into memory."""
+    if os.path.exists(trace_path):
+      try:
+        with open(trace_path, "r") as f:
+          self.trace_commands = json.load(f)
+          self.total_steps = len(self.trace_commands)
+        print(f"Loaded {self.total_steps} commands from {trace_path}")
+      except Exception as e:
+        print(f"Error loading trace payload from {trace_path}: {e}")
+        self.trace_commands = []
+        self.total_steps = 0
+    else:
+      print(f"Warning: Trace file not found at {trace_path}")
+      self.trace_commands = []
+      self.total_steps = 0
+
+  def validate_and_start_job(
+      self, start_step: Any, end_step: Any
+  ) -> Tuple[int, Dict[str, Any]]:
+    """Validates step bounds and registers an active asynchronous job.
+
+    Returns:
+        A tuple of (http_status_code, response_payload_dict).
+    """
+    with self.lock:
+      # If trace commands are not yet loaded, attempt to load them now
+      if not self.trace_commands:
+        self.load_trace(get_trace_path())
+
+      # Reject concurrent execution on the same container
+      if self.active_job_id is not None:
+        return 409, {
+            "error": "Conflict: An execution chunk is already running on this container.",
+            "active_job_id": self.active_job_id,
+        }
+
+      # Validate step integer types (reject bools and non-ints)
+      if not isinstance(start_step, int) or isinstance(start_step, bool) or not isinstance(end_step, int) or isinstance(end_step, bool):
+        return 400, {"error": "start_step and end_step must both be integers."}
+
+      # Check step bounds
+      if start_step < 1:
+        return 400, {"error": "start_step must be an integer >= 1."}
+
+      if end_step < start_step:
+        return 400, {"error": f"end_step ({end_step}) cannot be less than start_step ({start_step})."}
+
+      if self.total_steps > 0 and end_step > self.total_steps:
+        return 400, {
+            "error": f"end_step ({end_step}) exceeds total available trace steps ({self.total_steps})."
+        }
+
+      # Validate sequence contiguity or trajectory reset
+      if start_step == 1:
+        # Resetting trajectory on warm container or executing initial chunk
+        pass
+      elif self.last_completed_step > 0 and start_step == self.last_completed_step + 1:
+        # Contiguous continuation from previous chunk
+        pass
+      elif self.last_completed_step == 0:
+        return 400, {
+            "error": f"Initial execution chunk must begin at start_step 1, got {start_step}."
+        }
+      else:
+        return 400, {
+            "error": (
+                f"Invalid start_step {start_step}. Expected {self.last_completed_step + 1} "
+                f"(previous_end_step + 1) or 1 to reset."
+            )
+        }
+
+      # Register active job
+      job_id = str(uuid.uuid4())
+      self.active_job_id = job_id
+      self.jobs[job_id] = {
+          "job_id": job_id,
+          "status": "RUNNING",
+          "start_step": start_step,
+          "end_step": end_step,
+          "created_at": time.time(),
+          "exit_code": None,
+      }
+
+      return 202, {"job_id": job_id, "status": "ACCEPTED"}
+
+  def finish_job(
+      self, job_id: str, status: str, completed_step: int, exit_code: int
+  ) -> None:
+    """Updates job completion status and releases the concurrency lock."""
+    with self.lock:
+      if job_id in self.jobs:
+        self.jobs[job_id]["status"] = status
+        self.jobs[job_id]["exit_code"] = exit_code
+        self.jobs[job_id]["completed_step"] = completed_step
+        self.jobs[job_id]["finished_at"] = time.time()
+      if self.active_job_id == job_id:
+        self.active_job_id = None
+      self.last_completed_step = completed_step
+
+  def get_job_status(self, job_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves the current execution status of a given job ID."""
+    with self.lock:
+      if job_id not in self.jobs:
+        return None
+      return {
+          "job_id": job_id,
+          "status": self.jobs[job_id]["status"],
+      }
+
+
+GLOBAL_STATE = ExecutionState()
+
+
+def get_trace_path() -> str:
+  """Resolves the active trace file path from CLI argument or environment variables."""
+  if len(sys.argv) > 1 and sys.argv[1].endswith(".json"):
+    return sys.argv[1]
+  return os.environ.get("TRACE_PATH", os.environ.get("AGENT_TRACE_PATH", "/trace.json"))
+
+
+def execute_chunk_worker(job_id: str, start_step: int, end_step: int) -> None:
+  """Background daemon worker executing a bounded subset of trace commands."""
+  trace_path = get_trace_path()
+  if not GLOBAL_STATE.trace_commands or len(GLOBAL_STATE.trace_commands) < end_step:
+    GLOBAL_STATE.load_trace(trace_path)
+
+  commands = GLOBAL_STATE.trace_commands
+  chunk = commands[start_step - 1 : end_step]
+  disable_sleep = os.environ.get("SWEPERF_DISABLE_INTERNAL_SLEEP", "0") in ("1", "true")
+
+  completed_step = start_step - 1
+  final_exit_code = 0
+  unhandled_exception = False
+
+  print(f"[Job {job_id}] Starting execution for steps {start_step}..{end_step} ({len(chunk)} commands)")
+  sys.stdout.flush()
+
+  # Set up subshell environment with pager bypass
+  env = os.environ.copy()
+  env["PAGER"] = "cat"
+  env["GIT_PAGER"] = "cat"
+
+  for i, cmd_item in enumerate(chunk):
+    current_step = start_step + i
+
+    if isinstance(cmd_item, dict):
+      command = cmd_item.get("command", "")
+      sleep_time = cmd_item.get("sleep", None)
+    else:
+      command = cmd_item
+      sleep_time = None
+
+    if not command.strip():
+      completed_step = current_step
+      continue
+
+    print(f"\033[92m[Step {current_step}]$ {command}\033[0m")
     sys.stdout.flush()
 
-def wait_for_signals():
-    if os.environ.get("WAIT_FOR_CLAIM_FILE"):
-        claim_file = os.environ.get("WAIT_FOR_CLAIM_FILE")
-        print(f"Waiting for claim signal in {claim_file}...")
-        sys.stdout.flush()
-        while True:
-            if os.path.exists(claim_file):
-                try:
-                    with open(claim_file, 'r') as f:
-                        if 'agents.x-k8s.io/sandbox-id' in f.read():
-                            print("Claim signal received!")
-                            sys.stdout.flush()
-                            break
-                except Exception:
-                    pass
-            time.sleep(1)
+    # Wrap command with Conda environment activation if present in container
+    wrapped_cmd = (
+        "if [ -f /home/swe-bench/miniconda3/etc/profile.d/conda.sh ]; then "
+        "source /home/swe-bench/miniconda3/etc/profile.d/conda.sh && conda activate testbed; "
+        "elif [ -f /opt/miniconda3/bin/activate ]; then "
+        "source /opt/miniconda3/bin/activate testbed; fi && "
+        f"{command}"
+    )
 
-    if os.environ.get("WAIT_FOR_START_PORT"):
-        import socket
-        port = int(os.environ.get("WAIT_FOR_START_PORT"))
-        print(f"Waiting for 'start' command on port {port}...")
-        sys.stdout.flush()
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s.bind(('', port))
-            s.listen()
-            while True:
-                try:
-                    conn, addr = s.accept()
-                    with conn:
-                        data = conn.recv(1024)
-                        text = data.decode('utf-8', errors='ignore').lower()
-                        if 'start' in text:
-                            conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nOK\n")
-                            break
-                        else:
-                            conn.sendall(b"HTTP/1.1 400 Bad Request\r\n\r\n")
-                except Exception as e:
-                    pass
-        print("Start signal received via port!")
-        sys.stdout.flush()
+    try:
+      cwd_dir = "/testbed" if os.path.exists("/testbed") else os.getcwd()
+      result = subprocess.run(
+          wrapped_cmd,
+          shell=True,
+          capture_output=True,
+          text=True,
+          cwd=cwd_dir,
+          executable="/bin/bash",
+          env=env,
+      )
 
-def main():
-    wait_for_signals()
+      if result.stdout:
+        sys.stdout.write(result.stdout)
+      if result.stderr:
+        sys.stderr.write(result.stderr)
+      sys.stdout.flush()
+      sys.stderr.flush()
 
-    if len(sys.argv) != 2:
-        print("Usage: python3 replay.py <trace.json>")
-        sys.exit(1)
-        
-    trace_file = sys.argv[1]
-    if not os.path.exists(trace_file):
-        print(f"Error: trace file {trace_file} not found.")
-        sys.exit(1)
-        
-    with open(trace_file, 'r') as f:
-        commands = json.load(f)
-        
-    print(f"Loaded {len(commands)} commands to replay.")
-    
-    env = os.environ.copy()
-    env['PAGER'] = 'cat'
-    env['GIT_PAGER'] = 'cat'
-    child = pexpect.spawn('bash --norc --noprofile', encoding='utf-8', timeout=None, env=env)
-    
-    # Disable terminal echo so we don't see the command twice
-    child.sendline('stty -echo')
-    
-    unique_prompt = 'REPLAY_DONE_PROMPT_12345>'
-    child.sendline(f"PS1='{unique_prompt}'")
-    child.expect(unique_prompt)
-    
-    # Activate Conda testbed
-    child.sendline('source /home/swe-bench/miniconda3/etc/profile.d/conda.sh || true')
-    child.expect(unique_prompt)
-    child.sendline('conda activate testbed || true')
-    child.expect(unique_prompt)
+      if result.returncode != 0:
+        final_exit_code = result.returncode
 
-    
-    # Clear anything left in the buffer
-    _ = child.before
-    
-    for cmd in commands:
-        if isinstance(cmd, dict):
-            command = cmd.get("command", "")
-            sleep_time = cmd.get("sleep", None)
-        else:
-            command = cmd
-            sleep_time = None
-            
-        if sleep_time is None:
-            # Synthesize LLM latency timing based on log-normal distribution
-            # Derived from analyzing Antigravity LLM interaction logs across 23 real-world complex coding tasks.
-            # Median: 6.00s, P90: 12.00s, Avg: 15.65s, Max: 169s
-            mu = float(os.environ.get("LLM_LATENCY_MU", "2.0414"))
-            sigma = float(os.environ.get("LLM_LATENCY_SIGMA", "0.8674"))
-            min_latency = float(os.environ.get("LLM_LATENCY_MIN", "0.5"))
-            sleep_time = max(min_latency, random.lognormvariate(mu, sigma))
-            
+      # Continue executing subsequent steps even if a command fails
+      completed_step = current_step
 
-        if not command.strip():
-            continue
-            
-        simulate_typing(command)
-        
-        child.sendline(command)
-        child.expect(unique_prompt)
-        
-        # Since echo is off, child.before is strictly the command's output
-        clean_output = child.before
-            
-        # Clean trailing newlines before the prompt
-        if clean_output.endswith('\r\n'):
-            clean_output = clean_output[:-2]
-            
-        if clean_output.strip():
-            sys.stdout.write(clean_output + "\n")
-        sys.stdout.flush()
-        print("") # new line for breathing room
-        
+    except Exception as e:
+      print(f"FATAL EXCEPTION executing step {current_step}: {e}")
+      sys.stdout.flush()
+      final_exit_code = -1
+      unhandled_exception = True
+      break
+
+    # Internal think-time simulation (bypassed if SWEPERF_DISABLE_INTERNAL_SLEEP=1)
+    if not disable_sleep:
+      if sleep_time is None:
+        mu = float(os.environ.get("LLM_LATENCY_MU", "2.0414"))
+        sigma = float(os.environ.get("LLM_LATENCY_SIGMA", "0.8674"))
+        min_latency = float(os.environ.get("LLM_LATENCY_MIN", "0.5"))
+        sleep_time = max(min_latency, random.lognormvariate(mu, sigma))
+      if sleep_time > 0:
         time.sleep(sleep_time)
-        
-    print("\n\033[96m--- Replay Complete ---\033[0m")
+
+  # Mark COMPLETED unless an unhandled execution exception occurred
+  final_status = "FAILED" if unhandled_exception else "COMPLETED"
+  GLOBAL_STATE.finish_job(job_id, final_status, completed_step, final_exit_code)
+  print(f"[Job {job_id}] Finished with status: {final_status} (Last Completed Step: {completed_step}, Exit Code: {final_exit_code})")
+  sys.stdout.flush()
+
+
+class WorkloadServerHandler(http.server.BaseHTTPRequestHandler):
+  """HTTP Request Handler implementing SWE-perf Asynchronous Execution API."""
+
+  def do_GET(self) -> None:
+    parsed_url = urllib.parse.urlparse(self.path)
+    path = parsed_url.path
+
+    if path in ("/status", "/health"):
+      query_params = urllib.parse.parse_qs(parsed_url.query)
+
+      # Poll job status: GET /status?job_id=<id>
+      if "job_id" in query_params:
+        job_id = query_params["job_id"][0]
+        status_data = GLOBAL_STATE.get_job_status(job_id)
+        if status_data is None:
+          self.send_response(404)
+          self.send_header("Content-Type", "application/json")
+          self.end_headers()
+          self.wfile.write(json.dumps({"error": f"Job ID {job_id} not found."}).encode("utf-8"))
+          return
+
+        response_bytes = json.dumps(status_data).encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(response_bytes)))
+        self.end_headers()
+        self.wfile.write(response_bytes)
+        return
+
+      # Pod liveness check: GET /status or GET /health
+      liveness_payload = {
+          "status": "UP",
+          "total_steps": GLOBAL_STATE.total_steps,
+          "last_completed_step": GLOBAL_STATE.last_completed_step,
+      }
+      response_bytes = json.dumps(liveness_payload).encode("utf-8")
+      self.send_response(200)
+      self.send_header("Content-Type", "application/json")
+      self.send_header("Content-Length", str(len(response_bytes)))
+      self.end_headers()
+      self.wfile.write(response_bytes)
+      return
+
+    self.send_response(404)
+    self.end_headers()
+
+  def do_POST(self) -> None:
+    parsed_url = urllib.parse.urlparse(self.path)
+    if parsed_url.path not in ("/execute", "/"):
+      self.send_response(404)
+      self.end_headers()
+      return
+
+    content_length = int(self.headers.get("Content-Length", 0))
+    post_data = self.rfile.read(content_length)
+
+    try:
+      payload = json.loads(post_data.decode("utf-8"))
+      if not isinstance(payload, dict):
+        raise ValueError("Payload must be a JSON object.")
+    except Exception as e:
+      self.send_response(400)
+      self.send_header("Content-Type", "application/json")
+      self.end_headers()
+      self.wfile.write(json.dumps({"error": f"Invalid JSON payload: {e}"}).encode("utf-8"))
+      return
+
+    start_step = payload.get("start_step")
+    end_step = payload.get("end_step")
+
+    if start_step is None or end_step is None:
+      self.send_response(400)
+      self.send_header("Content-Type", "application/json")
+      self.end_headers()
+      self.wfile.write(
+          json.dumps({"error": "Both 'start_step' and 'end_step' are required."}).encode("utf-8")
+      )
+      return
+
+    status_code, response_body = GLOBAL_STATE.validate_and_start_job(start_step, end_step)
+
+    if status_code == 202:
+      t = threading.Thread(
+          target=execute_chunk_worker,
+          args=(response_body["job_id"], start_step, end_step),
+          daemon=True,
+      )
+      t.start()
+
+    response_bytes = json.dumps(response_body).encode("utf-8")
+    self.send_response(status_code)
+    self.send_header("Content-Type", "application/json")
+    self.send_header("Content-Length", str(len(response_bytes)))
+    self.end_headers()
+    self.wfile.write(response_bytes)
+
+
+def wait_for_claim_signal() -> None:
+  """Preserve claim file watching if specified via WAIT_FOR_CLAIM_FILE."""
+  if os.environ.get("WAIT_FOR_CLAIM_FILE"):
+    claim_file = os.environ.get("WAIT_FOR_CLAIM_FILE")
+    print(f"Waiting for claim signal in {claim_file}...")
+    sys.stdout.flush()
+    while True:
+      if os.path.exists(claim_file):
+        try:
+          with open(claim_file, "r") as f:
+            if "agents.x-k8s.io/sandbox-id" in f.read():
+              print("Claim signal received!")
+              sys.stdout.flush()
+              break
+        except Exception:
+          pass
+      time.sleep(1)
+
+
+def wait_for_signals() -> None:
+  """Entrypoint hook preserved for backward compatibility with entrypoint.sh."""
+  wait_for_claim_signal()
+
+
+def run_legacy_tcp(port: int) -> None:
+  """Legacy TCP socket listener mode for backward compatibility (SWEPERF_LEGACY_TCP=1)."""
+  print(f"Starting SWE-perf Legacy TCP Socket Listener on port {port}...")
+  sys.stdout.flush()
+  trace_path = get_trace_path()
+  GLOBAL_STATE.load_trace(trace_path)
+
+  with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(("", port))
+    s.listen(1)
+    while True:
+      try:
+        conn, addr = s.accept()
+        with conn:
+          data = conn.recv(1024)
+          text = data.decode("utf-8", errors="ignore").lower()
+          if "start" in text:
+            conn.sendall(b"HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nOK\n")
+            print("Start signal received via TCP port!")
+            sys.stdout.flush()
+            # Execute full trace in a single run
+            execute_chunk_worker("legacy-tcp", 1, GLOBAL_STATE.total_steps)
+            break
+          else:
+            conn.sendall(b"HTTP/1.1 400 Bad Request\r\n\r\n")
+      except Exception as e:
+        print(f"TCP accept error: {e}")
+
+
+def main(
+    server_class=http.server.HTTPServer,
+    handler_class=WorkloadServerHandler,
+    port: int = 80,
+) -> None:
+  """Main entry point for SWE-perf container execution engine."""
+  wait_for_claim_signal()
+
+  # Check if legacy TCP mode requested or WAIT_FOR_START_PORT set
+  if os.environ.get("SWEPERF_LEGACY_TCP") == "1" or os.environ.get("WAIT_FOR_START_PORT"):
+    tcp_port = int(os.environ.get("WAIT_FOR_START_PORT", port))
+    run_legacy_tcp(tcp_port)
+    return
+
+  trace_path = get_trace_path()
+  GLOBAL_STATE.load_trace(trace_path)
+
+  server_port = int(os.environ.get("PORT", port))
+  server_address = ("0.0.0.0", server_port)
+  httpd = server_class(server_address, handler_class)
+  print(f"Starting SWE-perf Asynchronous Execution Server on port {server_port} (Total Steps: {GLOBAL_STATE.total_steps})...")
+  sys.stdout.flush()
+  httpd.serve_forever()
+
 
 if __name__ == "__main__":
-    main()
+  main()
