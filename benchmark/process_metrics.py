@@ -47,7 +47,14 @@ def parse_metrics(lines):
                 data[node]['per_job_ram'].append(ram / pods)
                 if 'history' not in data[node]:
                     data[node]['history'] = []
-                data[node]['history'].append((int(timestamp), cpu / pods, ram / pods))
+                try:
+                    ts_val = int(timestamp)
+                except ValueError:
+                    try:
+                        ts_val = int(datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp())
+                    except Exception:
+                        ts_val = 0
+                data[node]['history'].append((ts_val, cpu / pods, ram / pods))
                 
     return data
 
