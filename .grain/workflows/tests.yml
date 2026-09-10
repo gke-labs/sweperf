@@ -1,0 +1,16 @@
+name: Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: grain-sandbox
+    steps:
+    - name: Run tests
+      run: |
+        pip install pexpect
+        python -m unittest discover -s tests
