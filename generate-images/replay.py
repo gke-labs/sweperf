@@ -119,7 +119,12 @@ class ExecutionState:
       return 202, {"job_id": job_id, "status": "ACCEPTED"}
 
   def finish_job(
-      self, job_id: str, status: str, completed_step: int, exit_code: int
+      self,
+      job_id: str,
+      status: str,
+      completed_step: int,
+      exit_code: int,
+      execution_duration_ms: Optional[float] = None,
   ) -> None:
     """Updates job completion status and releases the concurrency lock."""
     with self.lock:
@@ -128,6 +133,8 @@ class ExecutionState:
         self.jobs[job_id]["exit_code"] = exit_code
         self.jobs[job_id]["completed_step"] = completed_step
         self.jobs[job_id]["finished_at"] = time.time()
+        if execution_duration_ms is not None:
+          self.jobs[job_id]["execution_duration_ms"] = execution_duration_ms
       if self.active_job_id == job_id:
         self.active_job_id = None
       self.last_completed_step = completed_step
@@ -137,10 +144,13 @@ class ExecutionState:
     with self.lock:
       if job_id not in self.jobs:
         return None
-      return {
+      job_data = {
           "job_id": job_id,
           "status": self.jobs[job_id]["status"],
       }
+      if "execution_duration_ms" in self.jobs[job_id]:
+        job_data["execution_duration_ms"] = self.jobs[job_id]["execution_duration_ms"]
+      return job_data
 
 
 GLOBAL_STATE = ExecutionState()
@@ -166,6 +176,7 @@ def execute_chunk_worker(job_id: str, start_step: int, end_step: int) -> None:
   completed_step = start_step - 1
   final_exit_code = 0
   unhandled_exception = False
+  total_execution_duration_ms = 0.0
 
   print(f"[Job {job_id}] Starting execution for steps {start_step}..{end_step} ({len(chunk)} commands)")
   sys.stdout.flush()
@@ -203,6 +214,7 @@ def execute_chunk_worker(job_id: str, start_step: int, end_step: int) -> None:
 
     try:
       cwd_dir = "/testbed" if os.path.exists("/testbed") else os.getcwd()
+      cmd_t0 = time.perf_counter()
       result = subprocess.run(
           wrapped_cmd,
           shell=True,
@@ -212,6 +224,8 @@ def execute_chunk_worker(job_id: str, start_step: int, end_step: int) -> None:
           executable="/bin/bash",
           env=env,
       )
+      cmd_duration_ms = (time.perf_counter() - cmd_t0) * 1000.0
+      total_execution_duration_ms += cmd_duration_ms
 
       if result.stdout:
         sys.stdout.write(result.stdout)
@@ -245,8 +259,18 @@ def execute_chunk_worker(job_id: str, start_step: int, end_step: int) -> None:
 
   # Mark COMPLETED unless an unhandled execution exception occurred
   final_status = "FAILED" if unhandled_exception else "COMPLETED"
-  GLOBAL_STATE.finish_job(job_id, final_status, completed_step, final_exit_code)
-  print(f"[Job {job_id}] Finished with status: {final_status} (Last Completed Step: {completed_step}, Exit Code: {final_exit_code})")
+  GLOBAL_STATE.finish_job(
+      job_id,
+      final_status,
+      completed_step,
+      final_exit_code,
+      round(total_execution_duration_ms, 2),
+  )
+  print(
+      f"[Job {job_id}] Finished with status: {final_status} (Last Completed"
+      f" Step: {completed_step}, Exit Code: {final_exit_code}, Execution"
+      f" Duration: {round(total_execution_duration_ms, 2)} ms)"
+  )
   sys.stdout.flush()
 
 
