@@ -12,5 +12,7 @@ jobs:
     steps:
     - name: Run tests
       run: |
-        pip install pexpect
-        python -m unittest discover -s tests
+        sudo rm -f /etc/apt/sources.list.d/hashicorp.list || true
+        sudo apt-get update || true
+        sudo apt-get install -y python3-pexpect
+        python3 -m unittest discover -s tests
