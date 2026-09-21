@@ -252,6 +252,32 @@ class TestSweperfAsyncExecutionServer(unittest.TestCase):
     elapsed_no_sleep = time.time() - t0
     self.assertLess(elapsed_no_sleep, 0.15)
 
+  def test_execution_duration_reported_and_excludes_sleep(self) -> None:
+    """Verifies execution_duration_ms measures subprocess run and excludes time.sleep."""
+    os.environ["SWEPERF_DISABLE_INTERNAL_SLEEP"] = "0"
+    trace = [{"command": "python3 -c 'import time; time.sleep(0.1)'", "sleep": 0.4}]
+    with open(self.trace_file, "w") as f:
+      json.dump(trace, f)
+    GLOBAL_STATE.load_trace(self.trace_file)
+
+    t0 = time.time()
+    resp = self._post_execute({"start_step": 1, "end_step": 1})
+    self.assertEqual(resp.status, 202)
+    job_id = json.loads(resp.read().decode("utf-8"))["job_id"]
+
+    final_stat = self._poll_until_finished(job_id, timeout_sec=5.0)
+    elapsed_wall_time = time.time() - t0
+
+    self.assertEqual(final_stat["status"], "COMPLETED")
+    self.assertIn("execution_duration_ms", final_stat)
+
+    # Subprocess ran for ~100ms; simulated sleep was 400ms (total wall time >= 500ms).
+    # execution_duration_ms must record subprocess time (~100ms) and NOT include the 400ms sleep.
+    exec_ms = final_stat["execution_duration_ms"]
+    self.assertGreaterEqual(elapsed_wall_time, 0.45)
+    self.assertGreaterEqual(exec_ms, 80.0)
+    self.assertLess(exec_ms, 300.0)
+
 
 # ---------------------------------------------------------------------------
 # Docker Integration Tests
